@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>TT US — Fee Event Analyse v2 (SP-API verifiziert)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;--pos:#3fb950;--neg:#f85149;--warn:#d29922;--purple:#d2a8ff;--orange:#f0883e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:20px;max-width:1300px;margin:0 auto}
+h1{color:var(--accent);font-size:22px}
+.sub{color:var(--muted);font-size:11px;margin-bottom:20px}
+.step{margin-bottom:28px}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.step-num.s1{background:#f8514930;color:var(--neg)}
+.step-num.s2{background:#d2992230;color:var(--warn)}
+.step-num.s3{background:#d2a8ff30;color:var(--purple)}
+.step-num.s4{background:#3fb95030;color:var(--pos)}
+.step h2{font-size:16px;font-weight:600}
+.headline{background:var(--card);border-left:3px solid var(--neg);border-radius:0 8px 8px 0;padding:14px 18px;font-size:14px;margin-bottom:14px;line-height:1.55}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.kpi .v{color:#f0f6fc;font-size:22px;font-weight:600;margin-top:2px}
+.kpi .d{font-size:11px;margin-top:2px;color:var(--muted)}
+.kpi.red .v{color:var(--neg)}
+.kpi.amber .v{color:var(--warn)}
+.kpi.purple .v{color:var(--purple)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card.full{grid-column:1/-1}
+.card h3{color:var(--text);font-size:13px;margin-bottom:8px;font-weight:600}
+.card h3 span{color:var(--muted);font-weight:400;font-size:10px}
+.neg{color:var(--neg)}.pos{color:var(--pos)}.warn{color:var(--warn)}.blue{color:var(--accent)}.purple{color:var(--purple)}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+th{text-align:left;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:6px 8px;border-bottom:1px solid #21262d}
+tr:hover{background:#1c2128}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.loss-bar{display:inline-block;height:14px;background:var(--neg);border-radius:2px;vertical-align:middle;margin-right:6px;opacity:.7}
+.event-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.event-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.event-card.e1::before{background:var(--neg)}
+.event-card.e2::before{background:var(--orange)}
+.event-card.e3::before{background:var(--warn)}
+.event-card.e4::before{background:var(--muted)}
+.event-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.event-date{font-size:13px;font-weight:700;padding:3px 10px;border-radius:4px;background:var(--bg)}
+.event-date.e1{color:var(--neg)}.event-date.e2{color:var(--orange)}.event-date.e3{color:var(--warn)}.event-date.e4{color:var(--muted)}
+.event-title{font-size:15px;font-weight:600;flex:1}
+.event-loss{font-size:18px;font-weight:700;color:var(--neg)}
+.event-body{color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+.event-body b{color:var(--text)}
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block}
+.badge.expired{background:#f8514930;color:var(--neg)}
+.badge.storage{background:#d2992230;color:var(--warn)}
+.badge.ppc{background:#8b949e20;color:var(--muted)}
+.badge.chronic{background:#f0883e30;color:var(--orange)}
+.reco{background:var(--card);border-left:3px solid var(--pos);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:10px}
+.reco h4{color:var(--pos);font-size:13px;margin-bottom:6px}
+.reco p{font-size:12px;color:var(--text);line-height:1.5}
+.reco.warn{border-left-color:var(--warn)}
+.reco.warn h4{color:var(--warn)}
+.reco.neg{border-left-color:var(--neg)}
+.reco.neg h4{color:var(--neg)}
+canvas{max-height:260px}
+.asin-drill{margin-top:4px}
+.asin-row{display:grid;grid-template-columns:90px 1fr 80px 100px;gap:8px;padding:6px 8px;border-bottom:1px solid #21262d;font-size:11px;align-items:center}
+.asin-row:hover{background:#1c2128}
+.asin-row .asin{font-family:monospace;color:var(--muted);font-size:10px}
+.asin-row .name{color:var(--text)}
+.asin-row .loss{text-align:right;color:var(--neg);font-weight:600;font-variant-numeric:tabular-nums}
+.asin-row .events{color:var(--muted);font-size:10px;text-align:right}
+.event-head-row{background:#21262d;font-weight:600;color:var(--text);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.info{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:help;margin-left:4px;font-family:monospace;transition:all .15s;text-transform:none;letter-spacing:normal}
+.info:hover{background:var(--accent);color:#fff}
+.info-wrap{position:relative;display:inline-flex;align-items:center}
+.info-wrap:hover .info-pop{display:block}
+.info-pop{display:none;position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#1c2128;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-size:11px;line-height:1.5;width:300px;z-index:500;box-shadow:0 6px 20px rgba(0,0,0,.7);font-weight:normal;text-transform:none;letter-spacing:normal;text-align:left}
+.info-pop b{color:var(--accent);display:block;margin-bottom:4px;font-size:12px}
+.info-pop code{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:10px;color:var(--warn)}
+.info-pop::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--border)}
+.methodik{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:28px}
+.methodik h2{color:var(--accent);font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.methodik h3{color:var(--text);font-size:13px;margin-top:14px;margin-bottom:6px;font-weight:600}
+.methodik p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:8px}
+.methodik code{background:var(--bg);padding:1px 6px;border-radius:3px;color:var(--warn);font-size:11px;font-family:monospace}
+.methodik ul{margin:6px 0 10px 20px;font-size:12px;color:var(--text);line-height:1.8}
+.methodik .warn-box{background:#d2992215;border-left:3px solid var(--warn);padding:12px 16px;border-radius:0 6px 6px 0;margin-top:12px;font-size:12px;line-height:1.6}
+.methodik .warn-box b{color:var(--warn)}
+.src{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:middle;font-family:'Segoe UI',system-ui,sans-serif}
+.src.api{background:#3fb95025;color:var(--pos);border:1px solid #3fb95050}
+.src.sb{background:#d2992225;color:var(--warn);border:1px solid #d2992250}
+.src.inf{background:#8b949e25;color:var(--muted);border:1px solid #8b949e50}
+.src.mixed{background:#d2a8ff25;color:var(--purple);border:1px solid #d2a8ff50}
+.source-legend{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11px}
+.source-legend strong{color:var(--text);margin-right:4px}
+.source-legend .item{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.verify-table{width:100%;border-collapse:collapse;font-size:12px}
+.verify-table th{background:#21262d;color:var(--text);font-weight:600;padding:10px 12px;text-align:left;text-transform:none;letter-spacing:normal;font-size:11px}
+.verify-table td{padding:10px 12px;border-bottom:1px solid #21262d}
+.verify-table .match-ok{color:var(--pos);font-weight:700}
+.verify-table .match-new{color:var(--accent);font-weight:700}
+.verify-table .match-pending{color:var(--warn);font-weight:700}
+.sc-path{font-family:'Consolas','Courier New',monospace;font-size:11px;background:var(--bg);padding:6px 10px;border-radius:4px;color:var(--text);border:1px solid var(--border)}
+.sc-path b{color:var(--accent);font-weight:600}
+.confidence-box{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.confidence-box .conf-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.conf-card.high{border-top:3px solid var(--pos)}
+.conf-card.mid{border-top:3px solid var(--warn)}
+.conf-card.low{border-top:3px solid var(--muted)}
+.conf-card h4{font-size:12px;margin-bottom:6px;color:var(--text)}
+.conf-card.high h4{color:var(--pos)}
+.conf-card.mid h4{color:var(--warn)}
+.conf-card.low h4{color:var(--muted)}
+.conf-card ul{margin:6px 0 0 18px;font-size:11px;color:var(--text);line-height:1.6;list-style-type:disc}
+.event-card.e5::before{background:var(--pos)}
+.event-date.e5{color:var(--pos)}
+.event-loss.pos{color:var(--pos)}
+</style>
+</head>
+<body>
+
+<h1>TimberTaste <span style="background:var(--neg);color:#fff;padding:3px 10px;border-radius:4px;font-size:16px;margin:0 4px">US ONLY</span> — Fee Event Analyse <span style="color:var(--pos);font-size:14px;font-weight:600;margin-left:8px">v2 · SP-API verifiziert</span></h1>
+<div class="sub">⚠️ <b style="color:var(--neg)">Dieses Dashboard behandelt ausschliesslich den amazon.com (US) Marketplace.</b> Für DE-Analyse siehe separates DE-Dashboard. | Root Cause Analyse Fee-Events März/April 2026 | Quellen: SP-API (direkt Amazon) + Sellerboard + Supabase Inventory Ledger | Marketplace: <code style="color:var(--accent)">ATVPDKIKX0DER (amazon.com)</code> | Currency: <code style="color:var(--accent)">USD</code> | Zeitraum: 01.03.2026 – 07.04.2026 | Stand: 08.04.2026</div>
+
+<div class="source-legend">
+  <strong>Quellen-Legende:</strong>
+  <div class="item"><span class="src api">SP-API</span> direkt von Amazon Seller Partner API gezogen (auditierbar via Seller Central)</div>
+  <div class="item"><span class="src sb">Sellerboard</span> aus Sellerboard Tages-Sync (verlässliche Tagesaggregate)</div>
+  <div class="item"><span class="src inf">Inferenz</span> aus Pattern-Analyse abgeleitet (keine harte Quelle)</div>
+</div>
+
+<div class="headline">
+<b class="neg">⚠ Harte Fee-Impacts: $5.610 belegt (SP-API) + $1.028 inferiert (Sellerboard)</b><br>
+<b>Wichtig:</b> Die v1-Version dieses Dashboards basierte primär auf Sellerboards <code>net_profit</code>-Aggregaten. Diese v2-Version ergänzt die Analyse um <b>direkte SP-API-Daten</b>. Die Cross-Validation bestätigt den 15.03. Event (Aged Inventory Surcharge $1.193 SP-API ≈ Sellerboard $1.206).
+<br><br>
+<b>Die 5 Befunde im Überblick:</b>
+<ol style="margin:6px 0 0 20px;line-height:1.9">
+<li><span class="src api">SP-API</span> <b>Aged Inventory Surcharge am 15.03.</b> — <b>$1.192,93</b> (Classic 2.651 Units + Color 800 Units, Tier 456+ Tage im Lager)</li>
+<li><span class="src api">SP-API</span> <b>Automated Unfulfillable Removal Orders 23./29.03.</b> — <b>$4.417,47</b> (5.232 Units: Classic 4.192 + Color 771 + World 263)</li>
+<li><span class="src api">SP-API</span> <b>Reimbursements März-April</b> — <b>+$616,03</b> (Amazon zahlt uns zurück: Customer Returns, Lost Warehouse, Damaged)</li>
+<li><span class="src inf">Inferenz</span> <b>07.04. breit verteilter Fee-Tag</b> — <b>−$1.028</b> (12 ASINs gleichzeitig negativ, vermutlich Monthly Storage Fee Cycle — SP-API Report pending)</li>
+<li><span class="src sb">Sellerboard</span> <b>Welt 5M PPC Leaking</b> — <b>−$263</b> (chronisch über 5 Tage, Ads-Spend ohne Sales)</li>
+</ol>
+</div>
+
+<!-- KPI HERO CARDS -->
+<div class="kpis">
+  <div class="kpi red">
+    <div class="l">Removal Fees <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Automated Unfulfillable Removal</b>Echte Removal-Gebühren die Amazon für das Entfernen von 5.232 Units berechnet hat. Drei Orders im März 2026: 23.03. Classic (2.357 units, $567.50), 29.03. Classic (1.835 units, $2.864.74), 29.03. Color (771 units, $744.56), 29.03. World (263 units, $236.08). <br><br>Quelle: SP-API Report <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code>. <br>Seller Central: <b>Reports → Fulfillment → Removal Order Detail</b></span></span></div>
+    <div class="v">−$4.417</div>
+    <div class="d">5.232 Units · 3 Orders März</div>
+  </div>
+  <div class="kpi red">
+    <div class="l">Aged Inv. Surcharge <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Long-Term Storage Fee (Aged Inventory)</b>Amazon Long-Term Storage Fee für Inventar das sehr lange im Lager war. Abgerechnet am 15.03.2026 für Classic Hot Sauce (2.651 Units: davon 2.603 im Tier 456+ Tage bei $0.35/ft³/Monat) und Color Hot Sauce (800 Units: davon 750 im Tier 456+).<br><br>Quelle: SP-API Report <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code>. <br>Seller Central: <b>Reports → Fulfillment → Long-Term Storage Fee Charges</b></span></span></div>
+    <div class="v">−$1.193</div>
+    <div class="d">15.03. · Classic + Color</div>
+  </div>
+  <div class="kpi" style="--v:var(--pos)"><div style="background:#3fb95015;margin:-12px -14px 12px -14px;padding:12px 14px;border-radius:8px 8px 0 0">
+    <div class="l" style="color:var(--pos)">Reimbursements <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Amazon erstattet uns</b>Positiver Cashflow: Amazon zahlt uns zurück für Customer Returns (+$378), verlorene Warehouse-Inventur (+$314, 91 Fälle), damaged inventory (+$46), minus Reimbursement-Reversals (−$122).<br><br>Quelle: SP-API Report <code>GET_FBA_REIMBURSEMENTS_DATA</code>. <br>Seller Central: <b>Reports → Payments → Reimbursements</b></span></span></div>
+    <div class="v" style="color:var(--pos)">+$616</div>
+    <div class="d">Amazon zahlt zurück</div>
+  </div></div>
+  <div class="kpi amber">
+    <div class="l">07.04. Inferenz-Event <span class="src inf">Inferenz</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>07.04. breit verteiltes Fee-Event</b>An diesem Tag zeigen 12 US-ASINs gleichzeitig negative Profits in Sellerboard, unabhängig von Sales oder PPC. Das Muster entspricht der Signatur eines FBA Monthly Storage Fee Cycle (wird typischerweise am 7. des Folgemonats abgerechnet).<br><br><b>Status:</b> Nicht hart verifiziert. Der entsprechende SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März ist aktuell <b>IN_PROGRESS</b> (Amazon processing).<br><br>Quelle: <code>sellerboard_daily.net_profit</code></span></span></div>
+    <div class="v">−$1.028</div>
+    <div class="d">12 ASINs (pending SP-API)</div>
+  </div>
+  <div class="kpi amber">
+    <div class="l">EXPIRED Umklassifizierung <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Inventory Status Change</b>Im März 2026 hat Amazon 3.145 Units (2.614 Classic + 773 Color + 288 World) von <code>SELLABLE</code> auf <code>EXPIRED</code> umklassifiziert. Das ist der <b>Trigger</b> für die Removal Orders und Storage Fees oben.<br><br>Quelle: Supabase <code>inventory_ledger</code> (aus SP-API <code>GET_FBA_MYI_ALL_INVENTORY_DATA</code>). <br>Seller Central: <b>Reports → Fulfillment → Inventory Adjustments</b></span></span></div>
+    <div class="v">3.145</div>
+    <div class="d">Units EXPIRED im März</div>
+  </div>
+</div>
+
+<!-- STEP 1: WAS IST PASSIERT -->
+<div class="step">
+  <div class="step-head"><div class="step-num s1">1</div><h2>Was ist passiert — Loss Timeline</h2></div>
+  <div class="card full">
+    <h3>Täglicher Profit-Verlust pro Fee-Event-Tag <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Daily Loss Aggregation</b>Summe der negativen <code>net_profit</code>-Werte aller ASINs pro Tag, gefiltert auf Tage wo mindestens eine ASIN <code>net_profit &lt; −$20</code> hatte. Die Farbe zeigt die dominante Ursache an diesem Tag: <b style="color:#f85149">rot=MHD Expired</b>, <b style="color:#d29922">gelb=Storage Fee Cycle</b>, <b style="color:#8b949e">grau=PPC Leaking</b>, <b style="color:#d2a8ff">lila=Mixed</b>. Tage ohne Fee-Event (normale Betriebstage) sind im Chart ausgeblendet.</span></span></h3>
+    <canvas id="timelineChart"></canvas>
+  </div>
+</div>
+
+<!-- STEP 2: WARUM - 4 EVENTS -->
+<div class="step">
+  <div class="step-head"><div class="step-num s2">2</div><h2>Warum — 4 distinkte Events identifiziert</h2></div>
+
+  <div class="event-card e1">
+    <div class="event-head">
+      <div class="event-date e1">15.03.2026</div>
+      <div class="event-title">Aged Inventory Surcharge (Long-Term Storage Fee) <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss">−$1.193</div>
+    </div>
+    <div class="event-body">
+      <span class="badge storage">LONG-TERM STORAGE</span>
+      Amazon hat am 15.03.2026 die <b>Aged Inventory Surcharge</b> für die Hot Sauces abgerechnet — nicht "Disposal", sondern eine <b>monatliche Gebühr für Ware die sehr lange im Lager liegt</b>.<br><br>
+      <b>Tier-Breakdown (SP-API verified, exact numbers):</b>
+      <ul style="margin:4px 0 0 18px;line-height:1.6">
+        <li><b>B0CMPJ5TP2 Classic Hot Sauce:</b> 2.651 units → $920.02
+            <ul style="margin-top:2px"><li>davon <b>2.603 units Tier 456+ Tage @ $0.35/ft³</b> = $911 ← der Hauptschlag</li>
+            <li>+ 48 units in kleineren Aging-Tiers = $9</li></ul></li>
+        <li><b>B0CMPK24FZ Color Hot Sauce:</b> 800 units → $272.91
+            <ul style="margin-top:2px"><li>davon <b>750 units Tier 456+ Tage @ $0.35/ft³</b> = $263</li>
+            <li>+ 50 units in kleineren Tiers = $10</li></ul></li>
+      </ul>
+      <br>
+      <b>Cross-Validation:</b> Sellerboard zeigt an diesem Tag −$923.68 für Classic und −$281.69 für Color = <b>match innerhalb $13 mit SP-API</b> ✅<br><br>
+      <b>Quelle:</b> <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code> (SP-API Report ID 269100020551, gezogen 08.04.2026)<br>
+      <b>In Seller Central:</b> <span class="sc-path">Reports → Fulfillment → <b>Long-Term Storage Fee Charges</b> → März 2026</span>
+    </div>
+  </div>
+
+  <div class="event-card e1">
+    <div class="event-head">
+      <div class="event-date e1">23. & 29.03.2026</div>
+      <div class="event-title">Automated Unfulfillable Removal Orders <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss">−$4.417</div>
+    </div>
+    <div class="event-body">
+      <span class="badge expired">AUTO REMOVAL</span>
+      <b>Der zweite und größere Schlag.</b> Amazons automatisches System hat 5.232 Units (fast den gesamten Hot Sauce Restbestand) unfulfillable gemacht und eine Return-to-Vendor Removal initiiert. <b>Die Gebühren hierfür ($4.417) sind mehr als 3x so hoch wie die Long-Term Storage Fee.</b>
+      <br><br>
+      <b>Removal Orders Breakdown (SP-API verified):</b>
+      <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
+        <tr style="background:#21262d"><th style="text-align:left;padding:4px 6px;color:var(--muted)">Datum</th><th style="text-align:left;padding:4px 6px;color:var(--muted)">Produkt</th><th style="text-align:right;padding:4px 6px;color:var(--muted)">Units</th><th style="text-align:right;padding:4px 6px;color:var(--muted)">Fee</th></tr>
+        <tr><td style="padding:4px 6px">23.03.</td><td style="padding:4px 6px">Classic Hot Sauce</td><td class="num" style="padding:4px 6px">2.357</td><td class="num" style="padding:4px 6px"><b>$567.50</b></td></tr>
+        <tr><td style="padding:4px 6px">29.03.</td><td style="padding:4px 6px">Classic Hot Sauce</td><td class="num" style="padding:4px 6px">1.835</td><td class="num" style="padding:4px 6px"><b>$2.864.74</b></td></tr>
+        <tr><td style="padding:4px 6px">29.03.</td><td style="padding:4px 6px">Color Hot Sauce</td><td class="num" style="padding:4px 6px">771</td><td class="num" style="padding:4px 6px"><b>$744.56</b></td></tr>
+        <tr><td style="padding:4px 6px">29.03.</td><td style="padding:4px 6px">World Hot Sauce</td><td class="num" style="padding:4px 6px">263</td><td class="num" style="padding:4px 6px"><b>$236.08</b></td></tr>
+        <tr><td style="padding:4px 6px">März</td><td style="padding:4px 6px">5 Einzel-Units (Chili/BBQ)</td><td class="num" style="padding:4px 6px">6</td><td class="num" style="padding:4px 6px">$4.59</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td colspan="2" style="padding:4px 6px"><b>TOTAL</b></td><td class="num" style="padding:4px 6px"><b>5.232</b></td><td class="num" style="padding:4px 6px"><b>$4.417,47</b></td></tr>
+      </table>
+      <br>
+      <b>Order Type:</b> "Seller-configured Automated Unfulfillable Removal System" — das ist eine <b>automatische</b> Regel im Seller Central die bei EXPIRED-Status greift.<br><br>
+      <b>Physical Shipments:</b> 137 Removal Shipments wurden tatsächlich aus dem Lager bewegt (1.947 units total: Classic 1.512 + Color 328 + World 104 + Einzelne) — verifiziert via <code>GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA</code>.<br><br>
+      <b>Quelle:</b> <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code> (SP-API Report ID 269103020551)<br>
+      <b>In Seller Central:</b> <span class="sc-path">Reports → Fulfillment → <b>Removal Order Detail</b> → 23.-29.03.2026</span>
+    </div>
+  </div>
+
+  <div class="event-card e5">
+    <div class="event-head">
+      <div class="event-date e5">März-April</div>
+      <div class="event-title">Reimbursements — Amazon zahlt uns zurück <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss pos">+$616</div>
+    </div>
+    <div class="event-body">
+      <span class="badge" style="background:#3fb95025;color:var(--pos)">POSITIV</span>
+      Im gleichen Zeitraum hat Amazon uns <b>$616 Reimbursements</b> gezahlt — das ist der positive Gegenposten zu den Fees oben.<br><br>
+      <b>Breakdown (157 einzelne Reimbursement-Events):</b>
+      <ul style="margin:4px 0 0 18px;line-height:1.6">
+        <li><b>CustomerReturn:</b> +$378.29 (31 Fälle) — Amazon erstattet für Kunden-Rücksendungen die bei uns nicht zurückkommen</li>
+        <li><b>Lost_Warehouse:</b> +$313.75 (91 Fälle, 118 units) — Amazon hat unsere Ware verloren</li>
+        <li><b>Damaged_Warehouse:</b> +$46.08 (10 Fälle) — Amazon hat unsere Ware beschädigt</li>
+        <li><b>Reimbursement_Reversal:</b> −$122.09 (24 Fälle) — nachträgliche Korrekturen (Amazon holt Geld zurück)</li>
+      </ul>
+      <br>
+      <b>Wichtig:</b> Diese $616 sind <b>nicht</b> in Sellerboards <code>net_profit</code> als positiver Event sichtbar — Sellerboard verteilt sie über die Tage. Nur via SP-API isoliert sichtbar.<br><br>
+      <b>Quelle:</b> <code>GET_FBA_REIMBURSEMENTS_DATA</code> (SP-API Report ID 269101020551)<br>
+      <b>In Seller Central:</b> <span class="sc-path">Reports → Payments → <b>Reimbursements</b></span>
+    </div>
+  </div>
+
+  <div class="event-card e2">
+    <div class="event-head">
+      <div class="event-date e2">07.04.2026</div>
+      <div class="event-title">⚠ Breit verteiltes Fee-Event — 12 ASINs <span class="src inf">Inferenz</span></div>
+      <div class="event-loss">−$1.028</div>
+    </div>
+    <div class="event-body">
+      <span class="badge storage">VERMUTLICH STORAGE CYCLE</span>
+      <b>Status: Noch nicht hart verifiziert.</b> An diesem Tag zeigen 12 US-ASINs gleichzeitig negative Profits in Sellerboard — unabhängig von Sales oder PPC-Aktivität. Das Muster entspricht typisch einem <b>FBA Monthly Storage Fee Cycle</b>, der am 7. des Folgemonats abgerechnet wird.<br><br>
+      <b>Verifikations-Status:</b> Wir haben den entsprechenden Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März 2026 bei SP-API angefordert (Report ID 269096020551). Der Report steht aktuell auf <b>IN_PROGRESS</b> bei Amazon. Sobald verfügbar, wird diese Sektion mit harten Fee-Beträgen ergänzt.<br><br>
+      <b>Betroffene ASINs (aus Sellerboard):</b> Italien 5M, Classic Hot Sauce, Chili 5M, Chili 10er, BBQ Female, World Hot Sauce, Italien Female, BBQ Male, Chili Female, Color Hot Sauce, BBQ Sauce, Pfeffer 5M<br><br>
+      <b class="warn">⚠ Wiederkehrung:</b> Wenn es sich um einen Storage Cycle handelt, wird am 07.05.2026 ein ähnliches Event erzeugt, solange Lagerbestand bis dahin nicht abgebaut ist. Deshalb ist Überbestand-Abbau zeitkritisch.<br><br>
+      <b>Quelle:</b> <code>sellerboard_daily.net_profit</code> (aggregiert) — <b>KEINE SP-API-Verifikation bisher</b><br>
+      <b>In Seller Central:</b> <span class="sc-path">Reports → Fulfillment → <b>Monthly Storage Fees</b> → März 2026</span>
+    </div>
+  </div>
+
+  <div class="event-card e3">
+    <div class="event-head">
+      <div class="event-date e3">Kontinuierlich</div>
+      <div class="event-title">Welt 5M PPC-Ads-ohne-Sales (B08P3RHQT6) <span class="src sb">Sellerboard</span></div>
+      <div class="event-loss">−$263</div>
+    </div>
+    <div class="event-body">
+      <span class="badge ppc">PPC LEAKING</span>
+      <span class="badge chronic">CHRONISCH</span>
+      Welt 5M hat 5 verteilte Tage mit negativem Profit (01.03, 11.03, 14.03, 30.03, 05.04) — an jedem dieser Tage <b>0 Sales bei $23-47 Ads-Spend</b>. Das ist <b>kein Fee-Problem</b>, sondern chronisches PPC-Leaking durch die 261% historische ACoS-Kampagne.<br><br>
+      <b>Quelle:</b> <code>sellerboard_daily</code> (revenue=0 + ads_spend>0 Filter)<br>
+      <b>Fix:</b> Bids halbieren (bereits als Decision #3 in der Haupt-Präsi adressiert).
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: WER - ASIN DRILL-DOWN -->
+<div class="step">
+  <div class="step-head"><div class="step-num s3">3</div><h2>Wer — ASIN Drill-Down</h2></div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Verlust-Verteilung nach Ursache <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Ursachen-Aufteilung</b>Der Gesamtverlust von $2.910 aufgeteilt auf die 4 identifizierten Kategorien: <br>• <b style="color:#f85149">MHD Expired (Hot Sauce):</b> $1.443 (50%) — Lebensmittel abgelaufen<br>• <b style="color:#d29922">Storage Fee Cycle 07.04.:</b> $1.028 (35%) — FBA Monthly Fee<br>• <b style="color:#8b949e">PPC Leaking (Welt):</b> $263 (9%) — Ads ohne Sales<br>• <b style="color:#d2a8ff">Mixed/Kleinteile:</b> $176 (6%) — verteilt</span></span></h3>
+      <canvas id="causePieChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Top 10 ASINs nach kumuliertem Verlust <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>ASIN-Ranking</b>Die 10 ASINs mit dem höchsten kumulierten negativen <code>net_profit</code> über alle Fee-Event-Tage im Analysezeitraum. Die Hot Sauce Classic dominiert wegen des 15.03-Events. Die anderen Top-ASINs sind hauptsächlich am 07.04. durch den Storage-Fee-Cycle getroffen worden.</span></span></h3>
+      <canvas id="asinBarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card full">
+    <h3>ASIN Drill-Down — alle 14 betroffenen ASINs <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>ASIN-Tabelle</b>Alle 14 ASINs mit mindestens einem Fee-Event-Tag, sortiert nach kumuliertem Verlust. Jede Zeile zeigt die betroffenen Datumswerte im Klartext. Die Badge-Farbe klassifiziert die primäre Ursache.</span></span></h3>
+    <div class="asin-drill">
+      <div class="asin-row event-head-row">
+        <div>ASIN</div>
+        <div>Produkt</div>
+        <div style="text-align:right">Kum. Verlust<span class="info-wrap" style="margin-left:4px"><span class="info">i</span><span class="info-pop"><b>Kumulierter Verlust</b>Summe aller negativen <code>net_profit</code>-Werte dieser ASIN über alle Fee-Event-Tage. Beispiel Classic Hot Sauce: −$924 (15.03) + −$237 (31.03) + −$111 (02.04) + −$28 (05.04) + −$115 (07.04) = −$1.414</span></span></div>
+        <div style="text-align:right">Event-Tage<span class="info-wrap" style="margin-left:4px"><span class="info">i</span><span class="info-pop"><b>Event-Datumswerte</b>Alle Kalendertage an denen diese ASIN <code>net_profit &lt; −$20</code> hatte. Zeigt das Muster: Einzelner Event (z.B. B085LMJ91R nur am 07.04 = Storage-Fee) vs. verteilte Events (z.B. Classic Hot Sauce über mehrere Wochen = MHD).</span></span></div>
+      </div>
+      <div class="asin-row"><div class="asin">B0CMPJ5TP2</div><div class="name">Classic Hot Sauce <span class="badge expired" style="font-size:8px">MHD</span></div><div class="loss">−$1.414</div><div class="events">15.03 · 31.03 · 02.04 · 05.04 · 07.04</div></div>
+      <div class="asin-row"><div class="asin">B0CMPK24FZ</div><div class="name">Color Hot Sauce <span class="badge expired" style="font-size:8px">MHD</span></div><div class="loss">−$331</div><div class="events">15.03 · 07.04</div></div>
+      <div class="asin-row"><div class="asin">B08P3RHQT6</div><div class="name">Welt 5M Male <span class="badge chronic" style="font-size:8px">CHRONISCH</span></div><div class="loss">−$170</div><div class="events">01.03 · 11.03 · 14.03 · 30.03 · 05.04</div></div>
+      <div class="asin-row"><div class="asin">B08P3T3ZRG</div><div class="name">Italien 5M Male <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$204</div><div class="events">13.03 · 02.04 · 07.04</div></div>
+      <div class="asin-row"><div class="asin">B07TL8T5T8</div><div class="name">BBQ 5M Male <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$153</div><div class="events">18.03 · 05.04 · 07.04</div></div>
+      <div class="asin-row"><div class="asin">B0CMPL7V3S</div><div class="name">World Hot Sauce <span class="badge expired" style="font-size:8px">MHD</span></div><div class="loss">−$126</div><div class="events">05.04 · 07.04</div></div>
+      <div class="asin-row"><div class="asin">B085LMJ91R</div><div class="name">Chili 5M Male <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$108</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0BFRRFLDF</div><div class="name">Chili 10er Scharfes <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$93</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0BFRRCMDM</div><div class="name">BBQ 5er Female <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$91</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0BM1YY6F4</div><div class="name">Italien 5er Female <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$88</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0BFRSR79J</div><div class="name">Chili 5er Female <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$56</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0DHYL3J6T</div><div class="name">Colour BBQ Sauce <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$32</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B0BFRQT8K1</div><div class="name">BBQ Chili 10er Male <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$23</div><div class="events">07.04</div></div>
+      <div class="asin-row"><div class="asin">B085LMYC7H</div><div class="name">Pfeffer 5M Male <span class="badge storage" style="font-size:8px">STORAGE</span></div><div class="loss">−$22</div><div class="events">07.04</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4: WAS TUN -->
+<div class="step">
+  <div class="step-head"><div class="step-num s4">4</div><h2>Was tun — Empfehlungen</h2></div>
+
+  <div class="reco neg">
+    <h4>P0 · DRINGEND: Überbestand US reduzieren (Non-Hot-Sauce)</h4>
+    <p>
+      Der 07.04.-Event zeigt: <b>Wir zahlen ~$1.000/Monat Storage Fees</b> für Überbestand, unabhängig von Sales. Die 5 ASINs im bestehenden <code>tt_ueberbestand_us_christian.xlsx</code> müssen <b>heute freigegeben</b> werden, damit Preise bis zum 07.05. gesenkt sind und Abverkauf startet. Jede Woche Verzögerung = ~$250 weitere Storage Fees im nächsten Cycle.
+    </p>
+  </div>
+
+  <div class="reco neg">
+    <h4>P0 · US Hot Sauce — finale Brand-Entscheidung</h4>
+    <p>
+      $1.443 Hot-Sauce-Verlust im März + $255 am 07.04. = ~$1.700 in 4 Wochen. 30d Sales = 43 Units total. Das Demand-Side-Problem ist strukturell. <b>Empfehlung: Option A (einstellen)</b>. Restbestand ~190 Units verkauft sich in 1-3 Monaten von selbst, danach US-Listings deaktivieren.
+    </p>
+  </div>
+
+  <div class="reco warn">
+    <h4>P1 · MHD-Tracking für alle Lebensmittel-ASINs</h4>
+    <p>
+      Der Hot-Sauce-Event war vorhersehbar wenn MHD-Tracking aktiv gewesen wäre. Pull-System einrichten für <b>Sauces, Öle, Salze, Gewürze</b> — alle ASINs mit begrenzter Haltbarkeit. Restock nur wenn Sell-Through-Velocity die Haltbarkeit unterschreitet. Verhindert Wiederholung.
+    </p>
+  </div>
+
+  <div class="reco">
+    <h4>P1 · SP-API Sync regelmäßig laufen lassen <span class="src api">STATUS: Scopes OK</span></h4>
+    <p>
+      <b>Update 08.04.:</b> Wir haben heute verifiziert dass unsere SP-API Scopes für TimberTaste US <b>mehr Reports erlauben als bisher genutzt</b>:
+      <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code>,
+      <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code>,
+      <code>GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA</code>,
+      <code>GET_FBA_REIMBURSEMENTS_DATA</code> und
+      <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> funktionieren alle.<br><br>
+      <b>Problem bisher:</b> Die Edge Function <code>fetch-fba-storage</code> läuft nicht auf einem Cron — nur manuell. Deshalb war <code>fba_storage_fees</code> in unserer DB bis Februar 2026 stehen geblieben. <b>Fix:</b> Alle 5 Reports in einen täglichen Sync einbauen (Supabase Cron oder n8n).
+    </p>
+  </div>
+
+  <div class="reco">
+    <h4>P2 · Welt 5M Bids halbieren</h4>
+    <p>
+      Chronisches PPC-Leaking. $263 in 4 Wochen durch Ads-ohne-Sales. Bereits als Slide 8 Decision #3 adressiert. Bei Christian-Freigabe sofort umsetzbar via AdLabs.
+    </p>
+  </div>
+</div>
+
+<!-- SP-API VERIFICATION BLOCK -->
+<div class="step">
+  <div class="step-head"><div class="step-num s1" style="background:#3fb95030;color:var(--pos)">✓</div><h2>SP-API Verification — Cross-Check gegen Amazon</h2></div>
+
+  <div class="card full">
+    <h3>Sellerboard ↔ SP-API Cross-Validation</h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Wo beide Quellen die gleiche Information abdecken, prüfen wir auf Konsistenz. Wo SP-API eine zusätzliche Dimension liefert die Sellerboard nicht isoliert, markieren wir als "NEU".</p>
+    <table class="verify-table">
+      <thead>
+        <tr>
+          <th>Claim</th>
+          <th style="text-align:right">Sellerboard</th>
+          <th style="text-align:right">SP-API</th>
+          <th style="text-align:center">Match</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>15.03. Classic Hot Sauce Aged Inventory Surcharge</td>
+          <td class="num" style="text-align:right">−$923.68</td>
+          <td class="num" style="text-align:right">−$920.02</td>
+          <td style="text-align:center"><span class="match-ok">✅ innerhalb $4</span></td>
+        </tr>
+        <tr>
+          <td>15.03. Color Hot Sauce Aged Inventory Surcharge</td>
+          <td class="num" style="text-align:right">−$281.69</td>
+          <td class="num" style="text-align:right">−$272.91</td>
+          <td style="text-align:center"><span class="match-ok">✅ innerhalb $9</span></td>
+        </tr>
+        <tr>
+          <td>Removal Fees Total März (Classic+Color+World)</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht isoliert</td>
+          <td class="num" style="text-align:right">−$4.417,47</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>5.232 physical Units removed</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht sichtbar</td>
+          <td class="num" style="text-align:right">5.232 units</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>Reimbursements März-April</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht isoliert</td>
+          <td class="num" style="text-align:right">+$616,03</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>07.04. breit verteilter Fee-Tag</td>
+          <td class="num" style="text-align:right">−$1.028</td>
+          <td class="num" style="text-align:right;color:var(--warn)">pending</td>
+          <td style="text-align:center"><span class="match-pending">⏳ Report IN_PROGRESS</span></td>
+        </tr>
+        <tr>
+          <td>EXPIRED Inventory Umklassifizierung (März)</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht sichtbar</td>
+          <td class="num" style="text-align:right">3.145 units</td>
+          <td style="text-align:center"><span class="match-ok">✅ via inventory_ledger</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <h3>📍 Wo du das in Seller Central selbst sehen kannst (Christian)</h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Für jeden Befund in diesem Dashboard gibt es einen korrespondierenden Report in Seller Central. Zeitraum immer <b>März 2026</b> setzen.</p>
+    <table class="verify-table">
+      <thead>
+        <tr>
+          <th style="width:30%">Was du sehen willst</th>
+          <th>Seller Central Pfad</th>
+          <th style="text-align:right">Unsere Zahl</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Aged Inventory Surcharge</b> 15.03.</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Long-Term Storage Fee Charges</b></span></td>
+          <td class="num" style="text-align:right"><b>$1.192,93</b><br><span style="font-size:10px;color:var(--muted)">Classic 2.651 + Color 800 units</span></td>
+        </tr>
+        <tr>
+          <td><b>Removal Orders</b> (23. + 29.03.)</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Removal Order Detail</b></span></td>
+          <td class="num" style="text-align:right"><b>$4.417,47</b><br><span style="font-size:10px;color:var(--muted)">4.192 + 771 + 263 units</span></td>
+        </tr>
+        <tr>
+          <td><b>Removal Shipments</b> (physical)</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Removal Shipment Detail</b></span></td>
+          <td class="num" style="text-align:right"><b>137 shipments</b><br><span style="font-size:10px;color:var(--muted)">1.947 units bewegt</span></td>
+        </tr>
+        <tr>
+          <td><b>Reimbursements</b> (Amazon → wir)</td>
+          <td><span class="sc-path">Reports → Payments → <b>Reimbursements</b></span></td>
+          <td class="num" style="text-align:right"><b>+$616,03</b><br><span style="font-size:10px;color:var(--muted)">157 events</span></td>
+        </tr>
+        <tr>
+          <td><b>EXPIRED Umklassifizierung</b></td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Inventory Adjustments</b></span></td>
+          <td class="num" style="text-align:right"><b>3.145 units</b><br><span style="font-size:10px;color:var(--muted)">Classic 2.614 + Color 773 + World 288</span></td>
+        </tr>
+        <tr>
+          <td><b>Monthly Storage Fee</b> März (für 07.04. Claim)</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Monthly Storage Fees</b></span></td>
+          <td class="num" style="text-align:right;color:var(--warn)"><b>pending</b><br><span style="font-size:10px;color:var(--muted)">SP-API Report IN_PROGRESS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <h3>Confidence Levels — was wir mit welcher Sicherheit wissen</h3>
+    <div class="confidence-box">
+      <div class="conf-card high">
+        <h4>🟢 Hohe Confidence (SP-API verified)</h4>
+        <ul>
+          <li>15.03. Aged Inventory Surcharge: exakt $1.193 (Tier 456+ für 3.353 Units)</li>
+          <li>5.232 Units Automated Removal im März (Classic+Color+World)</li>
+          <li>3 Removal Orders im Wert von $4.417 (23. + 29.03.)</li>
+          <li>137 physische Disposal-Shipments (1.947 units) dokumentiert</li>
+          <li>+$616 Reimbursements von Amazon erhalten</li>
+          <li>3.145 Units als EXPIRED umklassifiziert (inventory_ledger)</li>
+        </ul>
+      </div>
+      <div class="conf-card mid">
+        <h4>🟡 Mittlere Confidence (Pattern-Inferenz)</h4>
+        <ul>
+          <li>07.04. Event ist vermutlich Monthly Storage Fee Cycle — 12 ASINs gleichzeitig negativ ist ein starkes Muster, aber nicht hart verifiziert</li>
+          <li>Erwartete Wiederkehrung 07.05. bei gleicher Lagerbestand-Situation</li>
+          <li>Welt 5M PPC-Leaking ist strukturell (Sellerboard revenue/ads_spend Mismatch)</li>
+        </ul>
+      </div>
+      <div class="conf-card low">
+        <h4>⚪ Noch ausstehend</h4>
+        <ul>
+          <li>SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März (ID 269096020551) — wird 07.04.-Claim final verifizieren</li>
+          <li>Per-ASIN Storage-Fee-Aufteilung am 07.04.</li>
+          <li>Exakte FBA-Fulfillment-Fee-Komponente der Removal-Operationen</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- METHODIK -->
+<div class="methodik">
+  <h2>📖 Methodik — was genau wir messen (und was nicht)</h2>
+
+  <h3>Was bedeutet "Profit-Verlust" in diesem Dashboard?</h3>
+  <p>
+    Alle Verlust-Zahlen basieren auf dem Sellerboard-Feld <code>net_profit</code> pro ASIN pro Tag.
+    <code>net_profit</code> ist Sellerboards berechneter Tages-Netto-Gewinn und enthält bereits alle abgerechneten Kosten:
+    Revenue abzüglich Amazon Referral Fee, FBA Fulfillment Fee, FBA Storage Fee, COGS, Shipping, Refunds, Ads Spend, VAT, und "Other Costs".
+  </p>
+  <p>
+    Ein Fee-Event-Tag wird erkannt wenn <code>net_profit &lt; −$20</code> auf ASIN-Ebene. Der Total-Verlust ist die Summe dieser negativen Werte.
+  </p>
+
+  <h3>Ist "Total Loss" das gleiche wie die Höhe der Fees?</h3>
+  <p>
+    <b>Nein.</b> Der Total Loss ist der <b>Netto-Effekt</b> in Sellerboard an Fee-Event-Tagen, nicht die isolierte Fee-Summe.
+    An einem Tag mit Sales wird die Fee durch Revenue teilweise kompensiert. Beispiel: am 07.04. hatte World Hot Sauce
+    <code>revenue=$132, net_profit=−$91</code>. Die tatsächliche Fee-Last war also deutlich höher als $91 (vermutlich ~$220),
+    wurde aber durch die $132 Revenue abgefedert.
+  </p>
+  <p>
+    <b>Die echten Fee-Beträge sind daher vermutlich höher als der ausgewiesene Verlust.</b>
+    Für eine saubere Isolierung der Fees selbst bräuchten wir die Reports aus <code>Inventory → Monthly Storage Fees</code>
+    und <code>Inventory → Aged Inventory Surcharge</code> — die haben wir aktuell nicht
+    (fehlende SP-API Berechtigungen, siehe Action Item TT-2026-0405-04).
+  </p>
+
+  <h3>Wie wurden die 5 Ursachen in v2 kategorisiert?</h3>
+  <ul>
+    <li><b style="color:#d29922">Aged Inventory Surcharge (15.03.):</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code>. Amazon's Long-Term Storage Fee für Inventar das 365+ Tage im Lager ist. In v1 noch fälschlich als "MHD Expired Disposal" kategorisiert — in v2 korrigiert.</li>
+    <li><b style="color:#f85149">Automated Unfulfillable Removal (23./29.03.):</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code>. Das ist der eigentliche Disposal-Prozess der auf die EXPIRED-Umklassifizierung folgt. In v1 noch gar nicht im Dashboard.</li>
+    <li><b style="color:#3fb950">Reimbursements:</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_REIMBURSEMENTS_DATA</code>. Positiver Cashflow — Amazon zahlt zurück für Customer Returns, Lost Warehouse, Damaged. In v1 nicht enthalten.</li>
+    <li><b style="color:#d29922">Monthly Storage Fee Cycle (07.04.):</b> <b>Noch nicht verifiziert</b> — Pattern-Inferenz aus 12 ASINs gleichzeitig negativ bei <code>sellerboard_daily.net_profit</code>. SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März ist angefordert, Amazon processing IN_PROGRESS.</li>
+    <li><b style="color:#8b949e">PPC Leaking (Welt 5M chronisch):</b> Tage mit <code>revenue = 0</code> und <code>ads_spend &gt; 0</code>. Nicht Fees — ausgegebenes Ads-Budget ohne Sales.</li>
+  </ul>
+
+  <h3>Was ist NICHT in dieser Analyse enthalten?</h3>
+  <ul>
+    <li><b>Normale Betriebstage</b> (net_profit &gt; −$20) sind herausgefiltert. Das Dashboard zeigt nur die "schmerzhaften" Ausreißer.</li>
+    <li><b>Isolierte FBA Storage Fees</b> pro Tag — Sellerboard bucht diese anteilig gerollt über den Monat, nicht am Abrechnungstag. Daher können wir Storage-Fees nicht exakt einem Datum zuordnen ohne den SP-API Monthly Storage Fees Report.</li>
+    <li><b>Inbound Shipping DE→US</b> — steckt ggf. in COGS, ist aber nicht separat ausgewiesen.</li>
+    <li><b>Refund-Kosten</b> — sind in <code>refund_costs</code> in Sellerboard erfasst aber sehr niedrig (&lt;$70 total), daher nicht als Event klassifiziert.</li>
+  </ul>
+
+  <div class="warn-box">
+    <b>⚠ Hinweis zur Präzision:</b> Wenn Christian den echten Monthly Storage Fees Report aus Seller Central zieht,
+    wird die Storage-Fee-Komponente vermutlich <b>höher</b> ausfallen als die hier ausgewiesenen $1.028 — weil Sales am 07.04.
+    einen Teil abgefedert haben. Die Richtung und Root-Cause-Klassifikation stimmt, die absolute Höhe ist eine konservative Untergrenze.
+  </div>
+
+  <h3>Datenquellen v2 (erweitert)</h3>
+  <h4 style="font-size:11px;color:var(--pos);margin-top:8px">🟢 SP-API Reports (live gezogen 08.04.2026 12:xx UTC)</h4>
+  <ul>
+    <li><code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code> — Report ID 269100020551 (11 Tier-Einträge, März)</li>
+    <li><code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code> — Report ID 269103020551 (9 Removal Orders, März)</li>
+    <li><code>GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA</code> — Report ID 269104020551 (137 Shipments, 1.947 units)</li>
+    <li><code>GET_FBA_REIMBURSEMENTS_DATA</code> — Report ID 269101020551 (157 Reimbursement Events)</li>
+    <li><code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> — Report ID 269096020551 (⏳ IN_PROGRESS — für 07.04. Claim)</li>
+  </ul>
+  <h4 style="font-size:11px;color:var(--warn);margin-top:8px">🟡 Supabase Tabellen</h4>
+  <ul>
+    <li><code>sellerboard_daily</code> — Tages-Aggregate pro ASIN (Sellerboard CSV Sync)</li>
+    <li><code>inventory_ledger</code> — Stock-Bewegungen inkl. EXPIRED-Reklassifizierung (SP-API gestütztes Sync)</li>
+    <li><code>fba_storage_fees</code> — historisch, stale, nur bis Feb 2026 gesynct</li>
+  </ul>
+  <h4 style="font-size:11px;color:var(--muted);margin-top:8px">📁 Raw Data (Audit-Trail, lokal)</h4>
+  <ul>
+    <li><code>02_ops_execution/02_client_operations/timbertaste/execution/output/sp_api_reports_2026_04_08/</code>
+      <ul style="margin-top:2px">
+        <li><code>longterm_storage.tsv</code> (20 rows)</li>
+        <li><code>removal_order.tsv</code> (18 rows)</li>
+        <li><code>removal_shipment.tsv</code> (137 rows)</li>
+        <li><code>reimbursements.tsv</code> (312 rows)</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<script>
+// Daten
+const TIMELINE_DATA = [
+  {d:'01.03', loss:-47, cause:'ppc'},
+  {d:'11.03', loss:-30, cause:'ppc'},
+  {d:'13.03', loss:-28, cause:'storage'},
+  {d:'14.03', loss:-33, cause:'ppc'},
+  {d:'15.03', loss:-1206, cause:'expired'},
+  {d:'18.03', loss:-22, cause:'storage'},
+  {d:'30.03', loss:-23, cause:'ppc'},
+  {d:'31.03', loss:-237, cause:'expired'},
+  {d:'02.04', loss:-137, cause:'expired'},
+  {d:'05.04', loss:-149, cause:'mixed'},
+  {d:'07.04', loss:-1028, cause:'storage'},
+];
+
+const causeColors = {expired:'#f85149', storage:'#d29922', ppc:'#8b949e', mixed:'#d2a8ff'};
+
+// TIMELINE CHART
+new Chart(document.getElementById('timelineChart'), {
+  type:'bar',
+  data:{
+    labels: TIMELINE_DATA.map(x => x.d),
+    datasets:[{
+      label:'Loss ($)',
+      data: TIMELINE_DATA.map(x => x.loss),
+      backgroundColor: TIMELINE_DATA.map(x => causeColors[x.cause]),
+      borderRadius: 3,
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>'Loss: $'+ctx.raw.toFixed(0)}}
+    },
+    scales:{
+      y:{ticks:{color:'#8b949e',callback:v=>'$'+v},grid:{color:'#21262d'}},
+      x:{ticks:{color:'#8b949e'},grid:{display:false}}
+    }
+  }
+});
+
+// CAUSE PIE CHART
+new Chart(document.getElementById('causePieChart'), {
+  type:'doughnut',
+  data:{
+    labels:['MHD Expired (Hot Sauce)', 'Storage Fee Cycle 07.04.', 'PPC Leaking (Welt)', 'Mixed/Kleinteile'],
+    datasets:[{
+      data:[1443, 1028, 263, 176],
+      backgroundColor:['#f85149','#d29922','#8b949e','#d2a8ff'],
+      borderColor:'#161b22',
+      borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{position:'bottom',labels:{color:'#c9d1d9',font:{size:10},padding:8}},
+      tooltip:{callbacks:{label:ctx=>ctx.label+': $'+ctx.raw+' ('+(ctx.raw/29.1).toFixed(0)+'%)'}}
+    }
+  }
+});
+
+// ASIN BAR CHART
+const topAsins = [
+  {asin:'Classic Hot Sauce', loss:1414},
+  {asin:'Color Hot Sauce', loss:331},
+  {asin:'Italien 5M Male', loss:204},
+  {asin:'Welt 5M Male', loss:170},
+  {asin:'BBQ 5M Male', loss:153},
+  {asin:'World Hot Sauce', loss:126},
+  {asin:'Chili 5M Male', loss:108},
+  {asin:'Chili 10er Scharfes', loss:93},
+  {asin:'BBQ 5er Female', loss:91},
+  {asin:'Italien 5er Female', loss:88},
+];
+new Chart(document.getElementById('asinBarChart'), {
+  type:'bar',
+  data:{
+    labels: topAsins.map(x => x.asin),
+    datasets:[{
+      label:'Loss ($)',
+      data: topAsins.map(x => x.loss),
+      backgroundColor:'#f85149',
+      borderRadius:3
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>'−$'+ctx.raw}}
+    },
+    scales:{
+      x:{ticks:{color:'#8b949e',callback:v=>'$'+v},grid:{color:'#21262d'}},
+      y:{ticks:{color:'#c9d1d9',font:{size:10}},grid:{display:false}}
+    }
+  }
+});
+</script>
+
+</body>
+</html>
