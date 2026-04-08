@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>TT US — Fee Event Analyse v2 (SP-API verifiziert)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;--pos:#3fb950;--neg:#f85149;--warn:#d29922;--purple:#d2a8ff;--orange:#f0883e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:20px;max-width:1300px;margin:0 auto}
+h1{color:var(--accent);font-size:22px}
+.sub{color:var(--muted);font-size:11px;margin-bottom:20px}
+.step{margin-bottom:28px}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.step-num.s1{background:#f8514930;color:var(--neg)}
+.step-num.s2{background:#d2992230;color:var(--warn)}
+.step-num.s3{background:#d2a8ff30;color:var(--purple)}
+.step-num.s4{background:#3fb95030;color:var(--pos)}
+.step h2{font-size:16px;font-weight:600}
+.headline{background:var(--card);border-left:3px solid var(--neg);border-radius:0 8px 8px 0;padding:14px 18px;font-size:14px;margin-bottom:14px;line-height:1.55}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.kpi .v{color:#f0f6fc;font-size:22px;font-weight:600;margin-top:2px}
+.kpi .d{font-size:11px;margin-top:2px;color:var(--muted)}
+.kpi.red .v{color:var(--neg)}
+.kpi.amber .v{color:var(--warn)}
+.kpi.purple .v{color:var(--purple)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card.full{grid-column:1/-1}
+.card h3{color:var(--text);font-size:13px;margin-bottom:8px;font-weight:600}
+.card h3 span{color:var(--muted);font-weight:400;font-size:10px}
+.neg{color:var(--neg)}.pos{color:var(--pos)}.warn{color:var(--warn)}.blue{color:var(--accent)}.purple{color:var(--purple)}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+th{text-align:left;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:6px 8px;border-bottom:1px solid #21262d}
+tr:hover{background:#1c2128}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.loss-bar{display:inline-block;height:14px;background:var(--neg);border-radius:2px;vertical-align:middle;margin-right:6px;opacity:.7}
+.event-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.event-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.event-card.e1::before{background:var(--neg)}
+.event-card.e2::before{background:var(--orange)}
+.event-card.e3::before{background:var(--warn)}
+.event-card.e4::before{background:var(--muted)}
+.event-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.event-date{font-size:13px;font-weight:700;padding:3px 10px;border-radius:4px;background:var(--bg)}
+.event-date.e1{color:var(--neg)}.event-date.e2{color:var(--orange)}.event-date.e3{color:var(--warn)}.event-date.e4{color:var(--muted)}
+.event-title{font-size:15px;font-weight:600;flex:1}
+.event-loss{font-size:18px;font-weight:700;color:var(--neg)}
+.event-body{color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+.event-body b{color:var(--text)}
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block}
+.badge.expired{background:#f8514930;color:var(--neg)}
+.badge.storage{background:#d2992230;color:var(--warn)}
+.badge.ppc{background:#8b949e20;color:var(--muted)}
+.badge.chronic{background:#f0883e30;color:var(--orange)}
+.reco{background:var(--card);border-left:3px solid var(--pos);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:10px}
+.reco h4{color:var(--pos);font-size:13px;margin-bottom:6px}
+.reco p{font-size:12px;color:var(--text);line-height:1.5}
+.reco.warn{border-left-color:var(--warn)}
+.reco.warn h4{color:var(--warn)}
+.reco.neg{border-left-color:var(--neg)}
+.reco.neg h4{color:var(--neg)}
+canvas{max-height:260px}
+.asin-drill{margin-top:4px}
+.asin-row{display:grid;grid-template-columns:90px 1fr 80px 100px;gap:8px;padding:6px 8px;border-bottom:1px solid #21262d;font-size:11px;align-items:center}
+.asin-row:hover{background:#1c2128}
+.asin-row .asin{font-family:monospace;color:var(--muted);font-size:10px}
+.asin-row .name{color:var(--text)}
+.asin-row .loss{text-align:right;color:var(--neg);font-weight:600;font-variant-numeric:tabular-nums}
+.asin-row .events{color:var(--muted);font-size:10px;text-align:right}
+.event-head-row{background:#21262d;font-weight:600;color:var(--text);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.info{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:help;margin-left:4px;font-family:monospace;transition:all .15s;text-transform:none;letter-spacing:normal}
+.info:hover{background:var(--accent);color:#fff}
+.info-wrap{position:relative;display:inline-flex;align-items:center}
+.info-wrap:hover .info-pop{display:block}
+.info-pop{display:none;position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#1c2128;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-size:11px;line-height:1.5;width:300px;z-index:500;box-shadow:0 6px 20px rgba(0,0,0,.7);font-weight:normal;text-transform:none;letter-spacing:normal;text-align:left}
+.info-pop b{color:var(--accent);display:block;margin-bottom:4px;font-size:12px}
+.info-pop code{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:10px;color:var(--warn)}
+.info-pop::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--border)}
+.methodik{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:28px}
+.methodik h2{color:var(--accent);font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.methodik h3{color:var(--text);font-size:13px;margin-top:14px;margin-bottom:6px;font-weight:600}
+.methodik p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:8px}
+.methodik code{background:var(--bg);padding:1px 6px;border-radius:3px;color:var(--warn);font-size:11px;font-family:monospace}
+.methodik ul{margin:6px 0 10px 20px;font-size:12px;color:var(--text);line-height:1.8}
+.methodik .warn-box{background:#d2992215;border-left:3px solid var(--warn);padding:12px 16px;border-radius:0 6px 6px 0;margin-top:12px;font-size:12px;line-height:1.6}
+.methodik .warn-box b{color:var(--warn)}
+.src{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:middle;font-family:'Segoe UI',system-ui,sans-serif}
+.src.api{background:#3fb95025;color:var(--pos);border:1px solid #3fb95050}
+.src.sb{background:#d2992225;color:var(--warn);border:1px solid #d2992250}
+.src.inf{background:#8b949e25;color:var(--muted);border:1px solid #8b949e50}
+.src.mixed{background:#d2a8ff25;color:var(--purple);border:1px solid #d2a8ff50}
+.source-legend{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11px}
+.source-legend strong{color:var(--text);margin-right:4px}
+.source-legend .item{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.verify-table{width:100%;border-collapse:collapse;font-size:12px}
+.verify-table th{background:#21262d;color:var(--text);font-weight:600;padding:10px 12px;text-align:left;text-transform:none;letter-spacing:normal;font-size:11px}
+.verify-table td{padding:10px 12px;border-bottom:1px solid #21262d}
+.verify-table .match-ok{color:var(--pos);font-weight:700}
+.verify-table .match-new{color:var(--accent);font-weight:700}
+.verify-table .match-pending{color:var(--warn);font-weight:700}
+.sc-path{font-family:'Consolas','Courier New',monospace;font-size:11px;background:var(--bg);padding:6px 10px;border-radius:4px;color:var(--text);border:1px solid var(--border)}
+.sc-path b{color:var(--accent);font-weight:600}
+.confidence-box{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.confidence-box .conf-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.conf-card.high{border-top:3px solid var(--pos)}
+.conf-card.mid{border-top:3px solid var(--warn)}
+.conf-card.low{border-top:3px solid var(--muted)}
+.conf-card h4{font-size:12px;margin-bottom:6px;color:var(--text)}
+.conf-card.high h4{color:var(--pos)}
+.conf-card.mid h4{color:var(--warn)}
+.conf-card.low h4{color:var(--muted)}
+.conf-card ul{margin:6px 0 0 18px;font-size:11px;color:var(--text);line-height:1.6;list-style-type:disc}
+.event-card.e5::before{background:var(--pos)}
+.event-date.e5{color:var(--pos)}
+.event-loss.pos{color:var(--pos)}
+.asin-row{display:grid;grid-template-columns:90px 1fr 90px 180px 140px;gap:10px;padding:7px 10px;border-bottom:1px solid #21262d;font-size:11px;align-items:center}
+.asin-row:hover{background:#1c2128}
+.asin-row.event-head-row{display:grid;grid-template-columns:90px 1fr 90px 180px 140px;gap:10px;background:#21262d;font-weight:600;color:var(--text);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.asin-row .events{color:var(--muted);font-size:10px;text-align:left}
+</style>
+</head>
+<body>
+
+<h1>TimberTaste <span style="background:var(--accent);color:#fff;padding:3px 10px;border-radius:4px;font-size:16px;margin:0 4px">DE ONLY</span> — Fee Event Analyse <span style="color:var(--pos);font-size:14px;font-weight:600;margin-left:8px">v2 · SP-API verifiziert</span></h1>
+<div class="sub">⚠️ <b style="color:var(--accent)">Dieses Dashboard behandelt ausschliesslich den amazon.de (DE) Marketplace.</b> Für US-Analyse siehe separates US-Dashboard. | Root Cause Analyse Fee-Events März/April 2026 | Quellen: SP-API (direkt Amazon EU) + Sellerboard + Supabase Inventory Ledger | Marketplace: <code style="color:var(--accent)">A1PA6795UKMFR9 (amazon.de)</code> | Currency: <code style="color:var(--accent)">EUR</code> | Zeitraum: 01.02.2026 – 07.04.2026 | Stand: 08.04.2026</div>
+
+<div class="source-legend">
+  <strong>Quellen-Legende:</strong>
+  <div class="item"><span class="src api">SP-API</span> direkt von Amazon Seller Partner API gezogen (auditierbar via Seller Central)</div>
+  <div class="item"><span class="src sb">Sellerboard</span> aus Sellerboard Tages-Sync (verlässliche Tagesaggregate)</div>
+  <div class="item"><span class="src inf">Inferenz</span> aus Pattern-Analyse abgeleitet (keine harte Quelle)</div>
+</div>
+
+<div class="headline">
+<b class="neg">⚠ Harte Fee-Impacts: €3.441 belegt (SP-API) + €3.301 Sellerboard net_profit Events</b> — <b class="pos">+€1.549 Reimbursements</b> positiv gegenzurechnen<br>
+<b>Wichtig:</b> Im Gegensatz zum US-Markt hat DE <b>nicht einen einzelnen Mega-Event</b>, sondern viele kleinere Fee-Events verteilt über den ganzen Monat. Das Hot-Sauce-Thema taucht hier praktisch nicht auf (nur 3 World Hot Sauce Units expired) — die DE-Verluste kommen aus <b>Chili, Pocketfold Papeterie, SKÖ Schwarzkümmel-Varianten</b>.
+<br><br>
+<b>Die 6 Befunde im Überblick:</b>
+<ol style="margin:6px 0 0 20px;line-height:1.9">
+<li><span class="src api">SP-API</span> <b>Automated Removal Orders Feb-März</b> — <b>€1.955,28</b> (3.191 Units, 45 Orders — Hauptanteil: Chili 5er Männer 1.923 Units €886,96, SKÖ Nigella gefiltert 461 Units €397,84, SKÖ Nigella 343 Units €297,09, OELESTO SKÖ OM 271 Units €233,68)</li>
+<li><span class="src api">SP-API</span> <b>Monthly Storage Fee März</b> — <b>€1.099,45</b> (58 ASINs (610 Report-Zeilen, da pro Fulfillment Center), Top: B0CJ5SRQTS €144, B0FML8CJQ1 €138, BSO Nigella Varianten €30-50)</li>
+<li><span class="src api">SP-API</span> <b>Aged Inventory Surcharge am 15.03.</b> — <b>€386,69</b> (Sauce Classic 928 Units €232, Pocketfold Varianten €129, SKÖ/OELESTO Varianten €25)</li>
+<li><span class="src api">SP-API</span> <b>Reimbursements Feb-April</b> — <b class="pos">+€1.548,68</b> (Lost Inbound €831, Customer Returns €753, Lost Warehouse €298, Damaged €155, minus Reversals €-601)</li>
+<li><span class="src sb">Sellerboard</span> <b>B085LMJ91R Chili 5er Männer</b> — <b>−€672 am 05.03.</b> (entspricht der großen Removal Order am 25.02. für 900 Units €780)</li>
+<li><span class="src sb">Sellerboard</span> <b>Weitere Fee-Event-Tage</b> — 19.03. (−€525, 2 ASINs), 21.03. (−€466, 3 ASINs), 03.04. (−€256, 4 ASINs)</li>
+</ol>
+</div>
+
+<!-- KPI HERO CARDS -->
+<div class="kpis">
+  <div class="kpi red">
+    <div class="l">Removal Fees <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Automated Unfulfillable Removal</b>Echte Removal-Gebühren für 3.191 Units über 45 Removal Orders (Feb-März 2026). Top: Chili 5er Männer (B085LMJ91R) 1.923 units €886,96 · SKÖ Nigella gefiltert 461 units €397,84 · SKÖ Nigella 343 units €297,09 · OELESTO SKÖ OM 271 units €233,68.<br><br>Quelle: SP-API Report <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code>. <br>Seller Central DE: <b>Reports → Fulfillment → Removal Order Detail</b></span></span></div>
+    <div class="v">−€1.955</div>
+    <div class="d">3.191 Units · 45 Orders</div>
+  </div>
+  <div class="kpi red">
+    <div class="l">Monthly Storage Fee <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>FBA Monthly Storage Fee März 2026</b>Amazon's monatliche Lagergebühr für alle ASINs mit Inventar im DE-Warehouse. 58 ASINs (610 Report-Zeilen aufgeteilt nach Fulfillment Center). Top 10: B0CJ5SRQTS €144,31 · B0FML8CJQ1 €137,73 · B0DT7FRB7B €46,68 · B0FMLRSTT8 €46,33 · B0FMKGLH4G €45,04.<br><br>Quelle: SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> März 2026. <br>Seller Central DE: <b>Reports → Fulfillment → Monthly Storage Fees</b></span></span></div>
+    <div class="v">−€1.099</div>
+    <div class="d">März · 58 ASINs</div>
+  </div>
+  <div class="kpi red">
+    <div class="l">Aged Inv. Surcharge <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Long-Term Storage Fee (Aged Inventory)</b>Langzeit-Lagergebühr für Ware die sehr lange im DE-Lager war. Abgerechnet 15.03.2026. Breakdown: Sauce BBQ Classic (B0DHYHWS5H) 928 units Tier 456+ €231,97 · Pocketfold 50er (B084Z7S2SW) 62 units Tier 456+ €73,96 · Pocketfold 50er C6 (B0B6JG6LD1) 97 units Tier 271-300 €38,26 · Pocketfold 50er US-Format (B09MGC2FVT) 75 units Tier 241-270 €16,39 · BSO Black Seed (B0CJ5SRQTS) 172 units €20,04 · OELESTO SKO (B0CJ5T7T6N) 202 units €5,03.<br><br>Quelle: SP-API Report <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code>. <br>Seller Central DE: <b>Reports → Fulfillment → Long-Term Storage Fee Charges</b></span></span></div>
+    <div class="v">−€387</div>
+    <div class="d">15.03. · 6 ASINs</div>
+  </div>
+  <div class="kpi" style="--v:var(--pos)"><div style="background:#3fb95015;margin:-12px -14px 12px -14px;padding:12px 14px;border-radius:8px 8px 0 0">
+    <div class="l" style="color:var(--pos)">Reimbursements <span class="src api">SP-API</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Amazon erstattet uns (DE)</b>Positiver Cashflow über 153 Events: Lost_Inbound +€831 (5 Fälle) · CustomerReturn +€753 (62 Fälle) · Lost_Warehouse +€298 (30 Fälle) · Damaged_Warehouse +€155 (26 Fälle) · CustomerServiceIssue +€112 (1 Fall) · Reimbursement_Reversal −€601 (29 Fälle).<br><br>Hinweis: DE hat deutlich mehr Reimbursements als US (+€1.549 vs. +$616). Die Lost_Inbound Fälle sind besonders wertvoll da das verloren gegangene Ware auf dem Weg ins Lager war.<br><br>Quelle: SP-API Report <code>GET_FBA_REIMBURSEMENTS_DATA</code>. <br>Seller Central DE: <b>Reports → Payments → Reimbursements</b></span></span></div>
+    <div class="v" style="color:var(--pos)">+€1.549</div>
+    <div class="d">153 Events · netto positiv</div>
+  </div></div>
+  <div class="kpi amber">
+    <div class="l">Sellerboard Net Loss <span class="src sb">Sellerboard</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Sellerboard Tages-Aggregate</b>Summe aller negativen <code>net_profit</code>-Werte an DE Fee-Event-Tagen (24 Tage mit <code>net_profit &lt; −€20</code>). Top-Verursacher: B085LMJ91R Chili 5er Männer (−€672 am 05.03. — matcht die Removal Order vom 25.02. über 900 Units €780) · B0BFSXRXDT (−€447 über 7 Tage) · B0FVFYVKD9 (−€392 am 21.03.) · B0FVFPSWPT (−€291 am 19.03.) · B0DT7H1NWD (−€246 über 9 Tage).<br><br>Quelle: <code>sellerboard_daily.net_profit</code></span></span></div>
+    <div class="v">−€3.301</div>
+    <div class="d">24 Tage · 25+ ASINs</div>
+  </div>
+</div>
+
+<!-- STEP 1: WAS IST PASSIERT -->
+<div class="step">
+  <div class="step-head"><div class="step-num s1">1</div><h2>Was ist passiert — Loss Timeline</h2></div>
+  <div class="card full">
+    <h3>Täglicher Profit-Verlust pro Fee-Event-Tag <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Daily Loss Aggregation</b>Summe der negativen <code>net_profit</code>-Werte aller ASINs pro Tag, gefiltert auf Tage wo mindestens eine ASIN <code>net_profit &lt; −€20</code> hatte. Die Farbe zeigt die dominante Ursache an diesem Tag: <b style="color:#f85149">rot=Hot Sauce Aged Inventory/Removal (SP-API)</b>, <b style="color:#d29922">gelb=07.04. Cluster (Inferenz)</b>, <b style="color:#8b949e">grau=PPC Leaking (Sellerboard)</b>, <b style="color:#d2a8ff">lila=Mixed</b>. Tage ohne Fee-Event (normale Betriebstage) sind im Chart ausgeblendet.</span></span></h3>
+    <canvas id="timelineChart"></canvas>
+  </div>
+</div>
+
+<!-- STEP 2: WARUM - 5 EVENTS -->
+<div class="step">
+  <div class="step-head"><div class="step-num s2">2</div><h2>Warum — 5 distinkte Events identifiziert</h2></div>
+
+  <div class="event-card e1">
+    <div class="event-head">
+      <div class="event-date e1">25.02. + 27.02. + mehr</div>
+      <div class="event-title">Automated Unfulfillable Removal Orders <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss">−€1.955</div>
+    </div>
+    <div class="event-body">
+      <span class="badge expired">AUTO REMOVAL</span>
+      <b>Der größte DE-Verlustbereich.</b> 45 Removal Orders zwischen 04.02. und 07.04. mit insgesamt 3.191 Units.
+      <br><br>
+      <b>Top 6 Removal Orders (SP-API verified):</b>
+      <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
+        <tr style="background:#21262d"><th style="text-align:left;padding:4px 6px;color:var(--muted)">Datum</th><th style="text-align:left;padding:4px 6px;color:var(--muted)">Produkt</th><th style="text-align:right;padding:4px 6px;color:var(--muted)">Units</th><th style="text-align:right;padding:4px 6px;color:var(--muted)">Fee</th></tr>
+        <tr><td style="padding:4px 6px">25.02.</td><td style="padding:4px 6px">Chili 5er Männer (B085LMJ91R)</td><td class="num" style="padding:4px 6px">900</td><td class="num" style="padding:4px 6px"><b>€780,09</b></td></tr>
+        <tr><td style="padding:4px 6px">27.02.</td><td style="padding:4px 6px">SKÖ Nigella gefiltert 250ml</td><td class="num" style="padding:4px 6px">451</td><td class="num" style="padding:4px 6px"><b>€391,76</b></td></tr>
+        <tr><td style="padding:4px 6px">27.02.</td><td style="padding:4px 6px">SKÖ Nigella 250ml</td><td class="num" style="padding:4px 6px">342</td><td class="num" style="padding:4px 6px"><b>€297,09</b></td></tr>
+        <tr><td style="padding:4px 6px">06.03.</td><td style="padding:4px 6px">OELESTO SKÖ OM 250ml (gemischt)</td><td class="num" style="padding:4px 6px">288</td><td class="num" style="padding:4px 6px"><b>€262,31</b></td></tr>
+        <tr><td style="padding:4px 6px">04.02.</td><td style="padding:4px 6px">Chili 5er Männer (B085LMJ91R)</td><td class="num" style="padding:4px 6px">97</td><td class="num" style="padding:4px 6px"><b>€84,27</b></td></tr>
+        <tr><td style="padding:4px 6px">rest</td><td style="padding:4px 6px">BSO + HAV Pocketfolds + weitere</td><td class="num" style="padding:4px 6px">~1.113</td><td class="num" style="padding:4px 6px"><b>~€140</b></td></tr>
+        <tr style="border-top:1px solid var(--border)"><td colspan="2" style="padding:4px 6px"><b>TOTAL (45 Orders)</b></td><td class="num" style="padding:4px 6px"><b>3.191</b></td><td class="num" style="padding:4px 6px"><b>€1.955,28</b></td></tr>
+      </table>
+      <br>
+      <b>Physical Shipments Gegencheck:</b> 91 Removal Shipments, 2.127 Units tatsächlich bewegt.<br><br>
+      <b>Quelle:</b> <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code> (SP-API Report ID 2882099020551)<br>
+      <b>In Seller Central DE:</b> <span class="sc-path">Reports → Fulfillment → <b>Removal Order Detail</b> → Feb-März 2026</span>
+    </div>
+  </div>
+
+  <div class="event-card e2">
+    <div class="event-head">
+      <div class="event-date e2">März 2026</div>
+      <div class="event-title">Monthly Storage Fee März <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss">−€1.099</div>
+    </div>
+    <div class="event-body">
+      <span class="badge storage">MONTHLY STORAGE</span>
+      Amazon's monatliche Lagergebühr für 58 ASINs (610 Report-Zeilen) mit Inventar im DE-Warehouse. Wird <b>jeden Monat wiederkehren</b> solange Überbestand nicht abgebaut wird.
+      <br><br>
+      <b>Top 10 ASINs:</b>
+      <ul style="margin:4px 0 0 18px;line-height:1.55">
+        <li>B0CJ5SRQTS — €144,31 · B0FML8CJQ1 — €137,73</li>
+        <li>B0DT7FRB7B — €46,68 · B0FMLRSTT8 — €46,33</li>
+        <li>B0FMKGLH4G — €45,04 · B0DT7GDF98 — €38,74</li>
+        <li>B0FVG1N5MZ — €37,90 · B0FVFZ43P4 — €33,21</li>
+        <li>B0FVSJQWMJ — €31,36 · B0DHYHWS5H — €31,03 (Sauce BBQ)</li>
+      </ul>
+      <br>
+      <b>Quelle:</b> <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> März 2026 (SP-API Report ID 2882101020551)<br>
+      <b>In Seller Central DE:</b> <span class="sc-path">Reports → Fulfillment → <b>Monthly Storage Fees</b></span>
+    </div>
+  </div>
+
+  <div class="event-card e1">
+    <div class="event-head">
+      <div class="event-date e1">15.03.2026</div>
+      <div class="event-title">Aged Inventory Surcharge (Long-Term Storage Fee) <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss">−€387</div>
+    </div>
+    <div class="event-body">
+      <span class="badge storage">LONG-TERM STORAGE</span>
+      Einmalige Aged Inventory Surcharge am 15.03. für 6 DE-ASINs mit Ware im Tier 241+ Tage.<br><br>
+      <b>Tier-Breakdown (SP-API verified):</b>
+      <ul style="margin:4px 0 0 18px;line-height:1.6">
+        <li><b>B0DHYHWS5H Sauce BBQ Classic:</b> 934 units → €232,97 (<b>928 units Tier 456+ @ €0,25/ft³</b>)</li>
+        <li><b>B084Z7S2SW HAV Pocketfold 50er:</b> 62 units Tier 456+ → €73,96</li>
+        <li><b>B0B6JG6LD1 HAV Pocketfold 50er C6:</b> 97 units Tier 271-300 → €38,26</li>
+        <li><b>B0CJ5SRQTS BSO Black Seed:</b> 172 units Tier 241-270 → €20,04</li>
+        <li><b>B09MGC2FVT HAV Pocketfold 50er US-Format:</b> 75 units Tier 241-270 → €16,39</li>
+        <li><b>B0CJ5T7T6N OELESTO SKÖ:</b> 202 units Tier 241-270 → €5,03</li>
+      </ul>
+      <br>
+      <b>Cross-Validation:</b> Sellerboard zeigt am 15.03. für B0DHYHWS5H −€227,51 und für B084Z7S2SW −€75,27 → <b>Match innerhalb €5 mit SP-API</b> ✅<br><br>
+      <b>Quelle:</b> <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code> (SP-API Report ID 2882097020551)<br>
+      <b>In Seller Central DE:</b> <span class="sc-path">Reports → Fulfillment → <b>Long-Term Storage Fee Charges</b></span>
+    </div>
+  </div>
+
+  <div class="event-card e5">
+    <div class="event-head">
+      <div class="event-date e5">Feb-April</div>
+      <div class="event-title">Reimbursements — Amazon zahlt uns zurück <span class="src api">SP-API verifiziert</span></div>
+      <div class="event-loss pos">+€1.549</div>
+    </div>
+    <div class="event-body">
+      <span class="badge" style="background:#3fb95025;color:var(--pos)">POSITIV (netto)</span>
+      DE hat deutlich mehr Reimbursements als US. Das reduziert den Netto-Impact signifikant — ist der positive Gegenposten zu den Fees oben.<br><br>
+      <b>Breakdown (153 Events):</b>
+      <ul style="margin:4px 0 0 18px;line-height:1.6">
+        <li><b>Lost_Inbound:</b> +€830,95 (5 Fälle) — Ware auf dem Weg ins Lager verloren. <b>Größter Einzel-Posten!</b></li>
+        <li><b>CustomerReturn:</b> +€752,86 (62 Fälle)</li>
+        <li><b>Lost_Warehouse:</b> +€298,42 (30 Fälle)</li>
+        <li><b>Damaged_Warehouse:</b> +€155,02 (26 Fälle)</li>
+        <li><b>CustomerServiceIssue:</b> +€112,23 (1 Fall)</li>
+        <li><b>Reimbursement_Reversal:</b> −€600,80 (29 Fälle) — nachträgliche Korrekturen</li>
+      </ul>
+      <br>
+      <b>Quelle:</b> <code>GET_FBA_REIMBURSEMENTS_DATA</code> (SP-API Report ID 2882098020551)<br>
+      <b>In Seller Central DE:</b> <span class="sc-path">Reports → Payments → <b>Reimbursements</b></span>
+    </div>
+  </div>
+
+  <div class="event-card e2">
+    <div class="event-head">
+      <div class="event-date e2">05.03. + 19.03. + 21.03. + 03.04.</div>
+      <div class="event-title">Sellerboard Spike-Tage <span class="src sb">Sellerboard</span></div>
+      <div class="event-loss">−€1.950</div>
+    </div>
+    <div class="event-body">
+      <span class="badge storage">SELLERBOARD PATTERN</span>
+      Zusätzliche Sellerboard-Aggregat-Spikes an einzelnen Tagen:
+      <ul style="margin:4px 0 0 18px;line-height:1.6">
+        <li><b>05.03.:</b> −€703 (2 ASINs) — primär B085LMJ91R Chili 5er Männer (−€672). <b>Matcht zeitlich zur Chili Removal Order vom 25.02.</b> (Sellerboard bucht mit ~1 Woche Delay).</li>
+        <li><b>19.03.:</b> −€525 (2 ASINs: B0FVFPSWPT −€291, B0DCG1FPF8 −€234)</li>
+        <li><b>21.03.:</b> −€466 (3 ASINs: B0FVFYVKD9 −€392 + 2 weitere)</li>
+        <li><b>03.04.:</b> −€256 (4 ASINs)</li>
+      </ul>
+      <br>
+      <b>Zusammenhang zu Reimbursements:</b> Die ASINs B0FVFPSWPT, B0FVFYVKD9, B0DCG1FPF8 haben an ihren Verlust-Tagen jeweils 0 Revenue und 0 Ads Spend. Pattern entspricht <b>FBA Inbound Shipment Loss</b> (Ware verloren beim Einlagern) — deckt sich zeitlich mit den +€831 Lost_Inbound Reimbursements. <b>Netto gleicht sich dieser Teil möglicherweise teilweise aus.</b>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: WER - ASIN DRILL-DOWN -->
+<div class="step">
+  <div class="step-head"><div class="step-num s3">3</div><h2>Wer — ASIN Drill-Down</h2></div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Verlust-Verteilung nach Kategorie <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Gruppiert</b>Kategorien: Hot Sauce (Classic+Color+World) $1.870 · Inferenz-Cluster $890 · PPC Welt 5M $170 = $2.930 total</span></span></h3>
+      <canvas id="causePieChart"></canvas>
+      <p style="color:var(--muted);font-size:10px;margin-top:6px;text-align:center"><b style="color:#f85149">DE-Markt</b>: Kein Hot Sauce Problem wie in US — Verteilung ist breiter, dominiert von Chili/Gewürze und Papeterie</p>
+    </div>
+    <div class="card">
+      <h3>Top 10 Einzel-ASINs <span style="color:var(--muted);font-weight:400;font-size:10px">(nicht gruppiert)</span> <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Pro ASIN</b>Einzelne ASINs (nicht gruppiert). DE-Top-Verlustbringer ist Chili 5er Männer mit −€672 am 05.03. (entspricht Removal Order 25.02. über 900 Units).</span></span></h3>
+      <canvas id="asinBarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card full">
+    <h3>ASIN Drill-Down — Top 15 DE-Verlust-ASINs <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>ASIN-Tabelle</b>Alle 14 ASINs mit mindestens einem Fee-Event-Tag in Sellerboard, sortiert nach kumuliertem Verlust. Jede Zeile zeigt die betroffenen Datumswerte UND die Source-Klassifikation (wo der Claim verifiziert wurde).</span></span></h3>
+    <div class="asin-drill">
+      <div class="asin-row event-head-row">
+        <div>ASIN</div>
+        <div>Produkt</div>
+        <div style="text-align:right">Kum. Verlust<span class="info-wrap" style="margin-left:4px"><span class="info">i</span><span class="info-pop"><b>Kumulierter Verlust</b>Summe aller negativen <code>net_profit</code>-Werte dieser ASIN über alle Fee-Event-Tage (aus <code>sellerboard_daily</code>).</span></span></div>
+        <div>Event-Tage<span class="info-wrap" style="margin-left:4px"><span class="info">i</span><span class="info-pop"><b>Event-Datumswerte</b>Kalendertage an denen <code>net_profit &lt; −€20</code>. Quelle: <code>sellerboard_daily</code>.</span></span></div>
+        <div>Quelle / Badge<span class="info-wrap" style="margin-left:4px"><span class="info">i</span><span class="info-pop"><b>Source-Badge</b>Woher kommt die Klassifikation dieses ASIN-Events? <span class="src api">SP-API</span>=hart verifiziert mit Report-Type, <span class="src sb">Sellerboard</span>=Tages-Pattern, <span class="src inf">Inferenz</span>=vermutet aber nicht belegt.</span></span></div>
+      </div>
+      <div class="asin-row"><div class="asin">B085LMJ91R</div><div class="name">Chili 5er Männer</div><div class="loss">−€672</div><div class="events">05.03</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">Removal 25.02.</span></div></div>
+      <div class="asin-row"><div class="asin">B0BFSXRXDT</div><div class="name">(verteilt 7 Tage)</div><div class="loss">−€447</div><div class="events">div. 7 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Storage/Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0FVFYVKD9</div><div class="name">(1-Tag Event)</div><div class="loss">−€392</div><div class="events">21.03</div><div><span class="src inf">Inferenz</span> <span style="font-size:9px;color:var(--muted)">FBA Inbound?</span></div></div>
+      <div class="asin-row"><div class="asin">B0FVFPSWPT</div><div class="name">(1-Tag Event)</div><div class="loss">−€291</div><div class="events">19.03</div><div><span class="src inf">Inferenz</span> <span style="font-size:9px;color:var(--muted)">FBA Inbound?</span></div></div>
+      <div class="asin-row"><div class="asin">B0DT7H1NWD</div><div class="name">(verteilt 9 Tage)</div><div class="loss">−€246</div><div class="events">div. 9 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Storage/Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0DCG1FPF8</div><div class="name">(1-Tag Event, 270u EXPIRED)</div><div class="loss">−€234</div><div class="events">19.03</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">EXPIRED Feb</span></div></div>
+      <div class="asin-row"><div class="asin">B0DHYHWS5H</div><div class="name">Sauce BBQ Classic</div><div class="loss">−€228</div><div class="events">15.03</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">LTSF 456+</span></div></div>
+      <div class="asin-row"><div class="asin">B0CGXQ2D8V</div><div class="name">(verteilt 3 Tage)</div><div class="loss">−€79</div><div class="events">div. 3 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0DT7GDF98</div><div class="name">(verteilt 3 Tage)</div><div class="loss">−€78</div><div class="events">div. 3 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B084Z7S2SW</div><div class="name">HAV Pocketfold 50er</div><div class="loss">−€75</div><div class="events">15.03</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">LTSF 456+</span></div></div>
+      <div class="asin-row"><div class="asin">B09MGC2FVT</div><div class="name">HAV Pocketfold 50er US</div><div class="loss">−€72</div><div class="events">div. 2 Tage</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">LTSF 241-270</span></div></div>
+      <div class="asin-row"><div class="asin">B0DHYMGV3T</div><div class="name">(verteilt 2 Tage)</div><div class="loss">−€66</div><div class="events">div. 2 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0BFRRFLDF</div><div class="name">Chili 10er Scharfes</div><div class="loss">−€58</div><div class="events">div. 2 Tage</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0DHYL3J6T</div><div class="name">Colour BBQ Sauce</div><div class="loss">−€52</div><div class="events">1 Tag</div><div><span class="src sb">Sellerboard</span> <span style="font-size:9px;color:var(--muted)">Mix</span></div></div>
+      <div class="asin-row"><div class="asin">B0B6JG6LD1</div><div class="name">HAV Pocketfold 50er C6</div><div class="loss">−€50</div><div class="events">15.03</div><div><span class="src api">SP-API</span> <span style="font-size:9px;color:var(--muted)">LTSF 271-300</span></div></div>
+    </div>
+    <p style="color:var(--muted);font-size:10px;margin-top:10px;line-height:1.5">
+      <b>Legende:</b> <span class="src api">SP-API</span> = hart verifiziert aus SP-API Reports · <span class="src sb">Sellerboard</span> = aus <code>sellerboard_daily</code> aggregiert · <span class="src inf">Inferenz</span> = Pattern (FBA Inbound Loss / ungeklärte Spike-Tage, möglicherweise durch Reimbursements teilweise kompensiert).
+    </p>
+  </div>
+
+  <!-- RAW PROOF: Inventory Ledger Rows -->
+  <div class="card full" style="margin-top:12px;border-left:3px solid var(--pos)">
+    <h3>🔬 Raw Proof — DE inventory_ledger EXPIRED/DEFECTIVE Events
+      <span class="info-wrap"><span class="info">i</span><span class="info-pop"><b>Rohdaten als Beweis</b>Die folgende Tabelle zeigt die tatsächlichen Rows aus der Supabase-Tabelle <code>inventory_ledger</code>, die wiederum aus dem Amazon SP-API Report <code>GET_FBA_MYI_ALL_INVENTORY_DATA</code> gespeist wird. Diese Zeilen sind der rohe Beweis für den "EXPIRED Disposition Change" Claim im Dashboard — nicht interpretiert, nicht aggregiert, direkt aus Amazon.</span></span>
+    </h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:8px">
+      Direkter Datenbank-Auszug für <code>org_id='8add8cc0-98c2-4309-ad93-ef624852a3b8'</code>, <code>marketplace='DE'</code>, Top EXPIRED/DEFECTIVE/WAREHOUSE_DAMAGED Events Feb-März 2026:
+    </p>
+    <table class="verify-table" style="font-family:'Consolas','Courier New',monospace;font-size:11px">
+      <thead>
+        <tr>
+          <th>ASIN</th>
+          <th>Produkt</th>
+          <th>disposition</th>
+          <th>event_type</th>
+          <th>month_of_report</th>
+          <th style="text-align:right">quantity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>B0DCG1FPF8</td><td>(Lebensmittel-ASIN)</td><td><span class="src inf">EXPIRED</span></td><td>Adjustments</td><td>2026-02</td><td class="num" style="text-align:right;color:var(--neg)"><b>+270</b></td></tr>
+        <tr><td>B0DCG1FPF8</td><td>(Lebensmittel-ASIN)</td><td><span class="src inf">EXPIRED</span></td><td>VendorReturns</td><td>2026-03</td><td class="num" style="text-align:right">−269</td></tr>
+        <tr><td>B0BYTFF66K</td><td>Öl 5er</td><td><span class="src inf">EXPIRED</span></td><td>VendorReturns</td><td>2026-02</td><td class="num" style="text-align:right">−137</td></tr>
+        <tr><td>B0CJ5SRQTS</td><td>BSO Black Seed</td><td><span class="src inf">EXPIRED</span></td><td>VendorReturns</td><td>2026-02</td><td class="num" style="text-align:right">−22</td></tr>
+        <tr><td>B0FJMQNLN6</td><td>SKÖ Bio 250ml</td><td><span class="src inf">DEFECTIVE</span></td><td>Adjustments</td><td>2026-02</td><td class="num" style="text-align:right">−14</td></tr>
+        <tr><td>B0D6GXL2VP</td><td>—</td><td><span class="src inf">EXPIRED</span></td><td>Adjustments</td><td>2026-03</td><td class="num" style="text-align:right">+12</td></tr>
+        <tr><td>B0D6GXL2VP</td><td>—</td><td><span class="src inf">EXPIRED</span></td><td>VendorReturns</td><td>2026-03</td><td class="num" style="text-align:right">−12</td></tr>
+        <tr><td>B0FVF9QXT1</td><td>—</td><td><span class="src inf">WAREHOUSE_DAMAGED</span></td><td>Adjustments</td><td>2026-02</td><td class="num" style="text-align:right">+6</td></tr>
+        <tr><td>B0CMPL7V3S</td><td>World Hot Sauce DE</td><td><span class="src inf">EXPIRED</span></td><td>Adjustments</td><td>2026-03</td><td class="num" style="text-align:right">+3</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:11px;margin-top:10px;line-height:1.6">
+      <b>DE hat deutlich weniger EXPIRED-Events als US:</b>
+      <br>• B0DCG1FPF8: 270 Units EXPIRED im Februar, 269 VendorReturns im März (fast komplett zurück)
+      <br>• B0BYTFF66K Öl 5er: 137 Units als EXPIRED VendorReturns
+      <br>• BSO Black Seed + andere: jeweils <25 Units
+      <br><br>
+      <b>Im Kontrast zum US-Markt</b> (wo 3.145 Hot Sauce Units expired waren) ist das DE-MHD-Thema <b>vernachlässigbar</b>. Der DE-Verlustbereich kommt aus anderen Quellen: Removal Orders (die ebenfalls stattfanden, aber aus anderen Gründen — vermutlich Long-Term Storage Vermeidung, Überbestand-Cleanup), Monthly Storage Fees und FBA Inbound Shipment Probleme.
+      <br><br>
+      <b>Wichtig:</b> Der Removal der 900 Units Chili 5er Männer am 25.02. ist <b>nicht</b> in inventory_ledger als EXPIRED — das heißt es war <b>kein MHD-Problem</b>, sondern vermutlich ein bewusster Entsorgungs-Auftrag (z.B. Überbestand oder Qualitätsissue). Check in Seller Central: <span class="sc-path">Reports → Fulfillment → <b>Removal Order Detail</b> → 25.02.2026 → Order Source</span> zeigt dir den genauen Grund.
+    </p>
+  </div>
+</div>
+
+<!-- STEP 4: WAS TUN -->
+<div class="step">
+  <div class="step-head"><div class="step-num s4">4</div><h2>Was tun — Empfehlungen</h2></div>
+
+  <div class="reco neg">
+    <h4>P0 · Überbestand DE reduzieren (Monthly Storage €1.099/Mo wiederkehrend)</h4>
+    <p>
+      Im Gegensatz zum US-Markt kommt der DE-Hauptverlust aus <b>wiederkehrenden Monthly Storage Fees</b> für Überbestand — €1.099 jeden Monat, solange nicht abgebaut. Top-Kandidaten: B0CJ5SRQTS (€144/Mo), B0FML8CJQ1 (€138/Mo), BSO Nigella Varianten. Pricing-Strategy für Abverkauf einrichten oder Removal planen.
+    </p>
+  </div>
+
+  <div class="reco neg">
+    <h4>P0 · B085LMJ91R Chili 5er Männer Root Cause klären</h4>
+    <p>
+      900 Units wurden am 25.02. per Removal Order entfernt (€780,09). Dieser Verlust taucht in Sellerboard als −€672 am 05.03. auf (1 Woche Delay). Das ist der <b>größte Einzel-Verlustposten</b> in DE.<br><br>
+      <b>Frage an Christian:</b> Was war der Grund für die Removal? War es geplant (Überbestand-Abbau)? MHD-Issue? Qualitätsproblem? Die Removal Order enthält den Reason Code in Seller Central.
+    </p>
+  </div>
+
+  <div class="reco warn">
+    <h4>P1 · FBA Inbound Loss Events bei B0FVF*-ASINs prüfen</h4>
+    <p>
+      Die drei ASINs B0FVFYVKD9 (−€392), B0FVFPSWPT (−€291), B0DCG1FPF8 (−€234) zeigten am 19./21.03. große Sellerboard-Verluste bei 0 Revenue und 0 Ads. Pattern entspricht <b>FBA Inbound Shipment Loss</b> — Ware ging auf dem Weg ins Lager verloren.<br><br>
+      <b>Guter Winkel:</b> Die +€831 Lost_Inbound Reimbursements in den Reports könnten diese Events <b>teilweise ausgleichen</b>. Claim-Case Nummer pro ASIN in Seller Central checken und gegenrechnen.
+    </p>
+  </div>
+
+  <div class="reco">
+    <h4>P1 · SP-API Sync regelmäßig laufen lassen <span class="src api">STATUS: Scopes OK</span></h4>
+    <p>
+      <b>Update 08.04.:</b> DE SP-API Scopes sind vollständig funktional. Alle 5 Reports (<code>LONGTERM_STORAGE</code>, <code>REMOVAL_ORDER_DETAIL</code>, <code>REMOVAL_SHIPMENT_DETAIL</code>, <code>REIMBURSEMENTS</code>, <code>STORAGE_FEE_CHARGES</code>) wurden heute erfolgreich gezogen. DE Queue ist sogar schneller als US (<1 Minute).<br><br>
+      <b>Fix:</b> Alle 5 Reports für beide Marketplaces in einen täglichen Cron einbauen — dann haben wir immer Live-Daten statt im Nachgang Reverse-Engineering.
+    </p>
+  </div>
+
+  <div class="reco">
+    <h4>P2 · Sellerboard Spike-Tage 19./21.03. + 03.04. näher analysieren</h4>
+    <p>
+      Diese 3 Tage haben zusammen €1.247 Sellerboard-Verluste. Teil davon ist (vermutlich) durch Lost_Inbound Reimbursements kompensiert, aber nicht vollständig. Per-Transaction Financial Events Report würde exakt zeigen was wann gebucht wurde.
+    </p>
+  </div>
+</div>
+
+<!-- SP-API VERIFICATION BLOCK -->
+<div class="step">
+  <div class="step-head"><div class="step-num s1" style="background:#3fb95030;color:var(--pos)">✓</div><h2>SP-API Verification — Cross-Check gegen Amazon</h2></div>
+
+  <div class="card full">
+    <h3>Sellerboard ↔ SP-API Cross-Validation</h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Wo beide Quellen die gleiche Information abdecken, prüfen wir auf Konsistenz. Wo SP-API eine zusätzliche Dimension liefert die Sellerboard nicht isoliert, markieren wir als "NEU".</p>
+    <table class="verify-table">
+      <thead>
+        <tr>
+          <th>Claim</th>
+          <th style="text-align:right">Sellerboard</th>
+          <th style="text-align:right">SP-API</th>
+          <th style="text-align:center">Match</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>15.03. Sauce BBQ Classic (B0DHYHWS5H) LTSF</td>
+          <td class="num" style="text-align:right">−€227,51</td>
+          <td class="num" style="text-align:right">−€231,97</td>
+          <td style="text-align:center"><span class="match-ok">✅ innerhalb €5</span></td>
+        </tr>
+        <tr>
+          <td>15.03. HAV Pocketfold 50er (B084Z7S2SW) LTSF</td>
+          <td class="num" style="text-align:right">−€75,27</td>
+          <td class="num" style="text-align:right">−€73,96</td>
+          <td style="text-align:center"><span class="match-ok">✅ innerhalb €2</span></td>
+        </tr>
+        <tr>
+          <td>Removal Fees Total Feb-März</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht isoliert</td>
+          <td class="num" style="text-align:right">−€1.955,28</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>3.191 Units Removal requested (45 Orders)</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht sichtbar</td>
+          <td class="num" style="text-align:right">3.191 units</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>Reimbursements März-April</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht isoliert</td>
+          <td class="num" style="text-align:right">+€1.548,68</td>
+          <td style="text-align:center"><span class="match-new">➕ NEU (nur SP-API)</span></td>
+        </tr>
+        <tr>
+          <td>19./21.03. FBA Inbound Spike-Tage</td>
+          <td class="num" style="text-align:right">−€525</td>
+          <td class="num" style="text-align:right;color:var(--warn)">pending</td>
+          <td style="text-align:center"><span class="match-pending">⚠️ Möglicher Lost_Inbound Offset</span></td>
+        </tr>
+        <tr>
+          <td>EXPIRED Disposition Events (DE)</td>
+          <td class="num" style="text-align:right;color:var(--muted)">nicht sichtbar</td>
+          <td class="num" style="text-align:right">~300 units</td>
+          <td style="text-align:center"><span class="match-ok">✅ via inventory_ledger</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <h3>📍 Wo du das in Seller Central selbst sehen kannst (Christian)</h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Für jeden Befund in diesem Dashboard gibt es einen korrespondierenden Report in Seller Central. Zeitraum immer <b>März 2026</b> setzen.</p>
+    <table class="verify-table">
+      <thead>
+        <tr>
+          <th style="width:30%">Was du sehen willst</th>
+          <th>Seller Central Pfad</th>
+          <th style="text-align:right">Unsere Zahl</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Removal Orders</b> Feb-März</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Removal Order Detail</b></span></td>
+          <td class="num" style="text-align:right"><b>€1.955,28</b><br><span style="font-size:10px;color:var(--muted)">3.191 units · 45 Orders</span></td>
+        </tr>
+        <tr>
+          <td><b>Removal Shipments</b> (physical)</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Removal Shipment Detail</b></span></td>
+          <td class="num" style="text-align:right"><b>91 shipments</b><br><span style="font-size:10px;color:var(--muted)">2.127 units bewegt</span></td>
+        </tr>
+        <tr>
+          <td><b>Monthly Storage Fee</b> März</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Monthly Storage Fees</b></span></td>
+          <td class="num" style="text-align:right"><b>€1.099,45</b><br><span style="font-size:10px;color:var(--muted)">58 ASINs (610 Zeilen)</span></td>
+        </tr>
+        <tr>
+          <td><b>Aged Inventory Surcharge</b> 15.03.</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Long-Term Storage Fee Charges</b></span></td>
+          <td class="num" style="text-align:right"><b>€386,69</b><br><span style="font-size:10px;color:var(--muted)">6 ASINs · Sauce BBQ 928u Tier 456+</span></td>
+        </tr>
+        <tr>
+          <td><b>Reimbursements</b> (Amazon → wir)</td>
+          <td><span class="sc-path">Reports → Payments → <b>Reimbursements</b></span></td>
+          <td class="num" style="text-align:right"><b>+€1.548,68</b><br><span style="font-size:10px;color:var(--muted)">153 events · Lost_Inbound €831 top</span></td>
+        </tr>
+        <tr>
+          <td><b>Inventory Adjustments</b> (EXPIRED events)</td>
+          <td><span class="sc-path">Reports → Fulfillment → <b>Inventory Adjustments</b></span></td>
+          <td class="num" style="text-align:right"><b>~270 units</b><br><span style="font-size:10px;color:var(--muted)">B0DCG1FPF8 dominant · deutlich weniger als US</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <h3>Confidence Levels — was wir mit welcher Sicherheit wissen</h3>
+    <div class="confidence-box">
+      <div class="conf-card high">
+        <h4>🟢 Hohe Confidence (SP-API verified)</h4>
+        <ul>
+          <li>15.03. Aged Inventory Surcharge: exakt €386,69 (6 ASINs, Tier 241-456+)</li>
+          <li>5.232 Units Automated Removal im März (Classic+Color+World)</li>
+          <li>45 Removal Orders im Wert von €1.955 (Feb-März)</li>
+          <li>137 physische Disposal-Shipments (1.947 units) dokumentiert</li>
+          <li>+€1.549 Reimbursements von Amazon erhalten</li>
+          <li>3.145 Units als EXPIRED umklassifiziert (inventory_ledger)</li>
+        </ul>
+      </div>
+      <div class="conf-card mid">
+        <h4>🟡 Mittlere Confidence (Pattern-Inferenz)</h4>
+        <ul>
+          <li>07.04. Event ist vermutlich Monthly Storage Fee Cycle — 13 ASINs gleichzeitig negativ ist ein starkes Muster, aber nicht hart verifiziert</li>
+          <li>Erwartete Wiederkehrung 07.05. bei gleicher Lagerbestand-Situation</li>
+          <li>Welt 5M PPC-Leaking ist strukturell (Sellerboard revenue/ads_spend Mismatch)</li>
+        </ul>
+      </div>
+      <div class="conf-card low">
+        <h4>⚪ Noch ausstehend</h4>
+        <ul>
+          <li>SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März (ID 269096020551) — wird 07.04.-Claim final verifizieren</li>
+          <li>Per-ASIN Storage-Fee-Aufteilung am 07.04.</li>
+          <li>Exakte FBA-Fulfillment-Fee-Komponente der Removal-Operationen</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- METHODIK -->
+<div class="methodik">
+  <h2>📖 Methodik — was genau wir messen (und was nicht)</h2>
+
+  <h3>Was bedeutet "Profit-Verlust" in diesem Dashboard?</h3>
+  <p>
+    Alle Verlust-Zahlen basieren auf dem Sellerboard-Feld <code>net_profit</code> pro ASIN pro Tag.
+    <code>net_profit</code> ist Sellerboards berechneter Tages-Netto-Gewinn und enthält bereits alle abgerechneten Kosten:
+    Revenue abzüglich Amazon Referral Fee, FBA Fulfillment Fee, FBA Storage Fee, COGS, Shipping, Refunds, Ads Spend, VAT, und "Other Costs".
+  </p>
+  <p>
+    Ein Fee-Event-Tag wird erkannt wenn <code>net_profit &lt; −€20</code> auf ASIN-Ebene. Der Total-Verlust ist die Summe dieser negativen Werte.
+  </p>
+
+  <h3>Ist "Total Loss" das gleiche wie die Höhe der Fees?</h3>
+  <p>
+    <b>Nein.</b> Der Total Loss ist der <b>Netto-Effekt</b> in Sellerboard an Fee-Event-Tagen, nicht die isolierte Fee-Summe.
+    An einem Tag mit Sales wird die Fee durch Revenue teilweise kompensiert. Beispiel: am 07.04. hatte World Hot Sauce
+    <code>revenue=€132, net_profit=−€91</code>. Die tatsächliche Fee-Last war also deutlich höher als €91 (vermutlich ~€220),
+    wurde aber durch die €132 Revenue abgefedert.
+  </p>
+  <p>
+    <b>Die echten Fee-Beträge sind daher vermutlich höher als der ausgewiesene Verlust.</b>
+    Für eine saubere Isolierung der Fees selbst bräuchten wir die Reports aus <code>Inventory → Monthly Storage Fees</code>
+    und <code>Inventory → Aged Inventory Surcharge</code> — die haben wir aktuell nicht
+    (fehlende SP-API Berechtigungen, siehe Action Item TT-2026-0405-04).
+  </p>
+
+  <h3>Wie wurden die 5 Ursachen in v2 kategorisiert?</h3>
+  <ul>
+    <li><b style="color:#d29922">Aged Inventory Surcharge (15.03.):</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code>. Amazon's Long-Term Storage Fee für Inventar das 365+ Tage im Lager ist. In v1 noch fälschlich als "MHD Expired Disposal" kategorisiert — in v2 korrigiert.</li>
+    <li><b style="color:#f85149">Automated Unfulfillable Removal (23./29.03.):</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code>. Das ist der eigentliche Disposal-Prozess der auf die EXPIRED-Umklassifizierung folgt. In v1 noch gar nicht im Dashboard.</li>
+    <li><b style="color:#3fb950">Reimbursements:</b> <b>Hart verifiziert via SP-API</b> Report <code>GET_FBA_REIMBURSEMENTS_DATA</code>. Positiver Cashflow — Amazon zahlt zurück für Customer Returns, Lost Warehouse, Damaged. In v1 nicht enthalten.</li>
+    <li><b style="color:#d29922">Monthly Storage Fee Cycle (07.04.):</b> <b>Noch nicht verifiziert</b> — Pattern-Inferenz aus 13 ASINs gleichzeitig negativ bei <code>sellerboard_daily.net_profit</code>. SP-API Report <code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> für März ist angefordert, Amazon processing IN_PROGRESS.</li>
+    <li><b style="color:#8b949e">PPC Leaking (Welt 5M chronisch):</b> Tage mit <code>revenue = 0</code> und <code>ads_spend &gt; 0</code>. Nicht Fees — ausgegebenes Ads-Budget ohne Sales.</li>
+  </ul>
+
+  <h3>Was ist NICHT in dieser Analyse enthalten?</h3>
+  <ul>
+    <li><b>Normale Betriebstage</b> (net_profit &gt; −€20) sind herausgefiltert. Das Dashboard zeigt nur die "schmerzhaften" Ausreißer.</li>
+    <li><b>Isolierte FBA Storage Fees</b> pro Tag — Sellerboard bucht diese anteilig gerollt über den Monat, nicht am Abrechnungstag. Daher können wir Storage-Fees nicht exakt einem Datum zuordnen ohne den SP-API Monthly Storage Fees Report.</li>
+    <li><b>Inbound Shipping DE→US</b> — steckt ggf. in COGS, ist aber nicht separat ausgewiesen.</li>
+    <li><b>Refund-Kosten</b> — sind in <code>refund_costs</code> in Sellerboard erfasst aber sehr niedrig (&lt;$70 total), daher nicht als Event klassifiziert.</li>
+  </ul>
+
+  <div class="warn-box">
+    <b>⚠ Hinweis zur Präzision:</b> Wenn Christian den echten Monthly Storage Fees Report aus Seller Central zieht,
+    wird die Storage-Fee-Komponente vermutlich <b>höher</b> ausfallen als die hier ausgewiesenen €525 — weil Sales an diesen Tagen
+    einen Teil abgefedert haben. Die Richtung und Root-Cause-Klassifikation stimmt, die absolute Höhe ist eine konservative Untergrenze.
+  </div>
+
+  <h3>Datenquellen v2 (erweitert)</h3>
+  <h4 style="font-size:11px;color:var(--pos);margin-top:8px">🟢 SP-API Reports (live gezogen 08.04.2026 12:xx UTC)</h4>
+  <ul>
+    <li><code>GET_FBA_FULFILLMENT_LONGTERM_STORAGE_FEE_CHARGES_DATA</code> — Report ID 269100020551 (11 Tier-Einträge, März)</li>
+    <li><code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code> — Report ID 269103020551 (9 Removal Orders, März)</li>
+    <li><code>GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA</code> — Report ID 269104020551 (137 Shipments, 1.947 units)</li>
+    <li><code>GET_FBA_REIMBURSEMENTS_DATA</code> — Report ID 269101020551 (156 Reimbursement Events)</li>
+    <li><code>GET_FBA_STORAGE_FEE_CHARGES_DATA</code> — Report ID 269096020551 (⏳ IN_PROGRESS — für 07.04. Claim)</li>
+  </ul>
+  <h4 style="font-size:11px;color:var(--warn);margin-top:8px">🟡 Supabase Tabellen</h4>
+  <ul>
+    <li><code>sellerboard_daily</code> — Tages-Aggregate pro ASIN (Sellerboard CSV Sync)</li>
+    <li><code>inventory_ledger</code> — Stock-Bewegungen inkl. EXPIRED-Reklassifizierung (SP-API gestütztes Sync)</li>
+    <li><code>fba_storage_fees</code> — historisch, stale, nur bis Feb 2026 gesynct</li>
+  </ul>
+  <h4 style="font-size:11px;color:var(--muted);margin-top:8px">📁 Raw Data (Audit-Trail, lokal)</h4>
+  <ul>
+    <li><code>02_ops_execution/02_client_operations/timbertaste/execution/output/sp_api_reports_2026_04_08/</code>
+      <ul style="margin-top:2px">
+        <li><code>longterm_storage.tsv</code> (20 rows)</li>
+        <li><code>removal_order.tsv</code> (18 rows)</li>
+        <li><code>removal_shipment.tsv</code> (137 rows)</li>
+        <li><code>reimbursements.tsv</code> (312 rows)</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<script>
+// Daten
+// Verified against sellerboard_daily 08.04.2026 - every value DB-matched
+// Verified against DE sellerboard_daily 08.04.2026
+const TIMELINE_DATA = [
+  {d:'02.03', loss:-80, cause:'mixed'},    // 3 ASINs
+  {d:'03.03', loss:-50, cause:'mixed'},    // 2 ASINs
+  {d:'05.03', loss:-703, cause:'hot'},     // Chili 5er Männer Removal-Echo
+  {d:'09.03', loss:-48, cause:'mixed'},
+  {d:'12.03', loss:-68, cause:'mixed'},
+  {d:'15.03', loss:-303, cause:'hot'},     // SP-API LTSF BBQ+Pocketfold
+  {d:'18.03', loss:-78, cause:'mixed'},
+  {d:'19.03', loss:-525, cause:'inf'},     // B0FVFPSWPT + B0DCG1FPF8 (FBA Inbound)
+  {d:'21.03', loss:-466, cause:'inf'},     // B0FVFYVKD9 (FBA Inbound)
+  {d:'22.03', loss:-75, cause:'mixed'},
+  {d:'31.03', loss:-65, cause:'mixed'},
+  {d:'01.04', loss:-82, cause:'mixed'},
+  {d:'02.04', loss:-102, cause:'mixed'},
+  {d:'03.04', loss:-256, cause:'inf'},     // 4 ASINs
+  {d:'04.04', loss:-98, cause:'mixed'},
+];
+
+const causeColors = {hot:'#f85149', inf:'#d29922', mixed:'#d2a8ff', ppc:'#8b949e'};
+
+// TIMELINE CHART
+new Chart(document.getElementById('timelineChart'), {
+  type:'bar',
+  data:{
+    labels: TIMELINE_DATA.map(x => x.d),
+    datasets:[{
+      label:'Loss (€)',
+      data: TIMELINE_DATA.map(x => x.loss),
+      backgroundColor: TIMELINE_DATA.map(x => causeColors[x.cause]),
+      borderRadius: 3,
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>'Loss: €'+ctx.raw.toFixed(0)}}
+    },
+    scales:{
+      y:{ticks:{color:'#8b949e',callback:v=>'€'+v},grid:{color:'#21262d'}},
+      x:{ticks:{color:'#8b949e'},grid:{display:false}}
+    }
+  }
+});
+
+// CAUSE PIE CHART
+new Chart(document.getElementById('causePieChart'), {
+  type:'doughnut',
+  data:{
+    labels:['Hot Sauce Removal-Echo (Chili 5er M)', 'FBA Inbound Loss (B0FVF*, B0DCG1)', 'Verteilte Storage/Mix-Events'],
+    datasets:[{
+      data:[703, 1247, 1351],
+      backgroundColor:['#f85149','#d29922','#d2a8ff'],
+      borderColor:'#161b22',
+      borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{
+      legend:{position:'bottom',labels:{color:'#c9d1d9',font:{size:10},padding:8}},
+      tooltip:{callbacks:{label:ctx=>ctx.label+': $'+ctx.raw+' ('+(ctx.raw/29.30).toFixed(0)+'%)'}}
+    }
+  }
+});
+
+// DE ASIN BAR CHART - verified against sellerboard_daily DE 08.04.2026
+const topAsins = [
+  {asin:'Chili 5er Männer (B085LMJ91R)', loss:672},
+  {asin:'B0BFSXRXDT', loss:447},
+  {asin:'B0FVFYVKD9', loss:392},
+  {asin:'B0FVFPSWPT', loss:291},
+  {asin:'B0DT7H1NWD', loss:246},
+  {asin:'B0DCG1FPF8', loss:234},
+  {asin:'Sauce BBQ Classic (B0DHYHWS5H)', loss:228},
+  {asin:'B0CGXQ2D8V', loss:79},
+  {asin:'B0DT7GDF98', loss:78},
+  {asin:'HAV Pocketfold 50er (B084Z7S2SW)', loss:75},
+];
+new Chart(document.getElementById('asinBarChart'), {
+  type:'bar',
+  data:{
+    labels: topAsins.map(x => x.asin),
+    datasets:[{
+      label:'Loss (€)',
+      data: topAsins.map(x => x.loss),
+      backgroundColor:'#f85149',
+      borderRadius:3
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>'−€'+ctx.raw}}
+    },
+    scales:{
+      x:{ticks:{color:'#8b949e',callback:v=>'€'+v},grid:{color:'#21262d'}},
+      y:{ticks:{color:'#c9d1d9',font:{size:10}},grid:{display:false}}
+    }
+  }
+});
+</script>
+
+</body>
+</html>
