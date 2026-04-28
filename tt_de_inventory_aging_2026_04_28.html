@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>TT DE -- Inventory-Aging-Loss-Analyse YTD 2026 (2026-01-01 bis 2026-04-28)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;--pos:#3fb950;--neg:#f85149;--warn:#d29922;--purple:#d2a8ff;--orange:#f0883e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:24px;max-width:1400px;margin:0 auto;line-height:1.5}
+h1{color:var(--accent);font-size:24px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:24px;line-height:1.6}
+.headline{background:var(--card);border-left:4px solid var(--neg);border-radius:0 10px 10px 0;padding:18px 22px;font-size:14px;margin:14px 0 22px;line-height:1.65}
+.headline.warn{border-left-color:var(--warn)}
+.headline.pos{border-left-color:var(--pos)}
+.headline ol{margin:8px 0 0 22px;line-height:2}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi .l{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.kpi .v{color:#f0f6fc;font-size:24px;font-weight:700;margin:2px 0}
+.kpi .d{font-size:11px;color:var(--muted)}
+.kpi.red .v{color:var(--neg)}.kpi.amber .v{color:var(--warn)}.kpi.pos .v{color:var(--pos)}.kpi.purple .v{color:var(--purple)}
+.step{margin-bottom:32px}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.step-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.step-num.s1{background:#f8514930;color:var(--neg)}.step-num.s2{background:#d2992230;color:var(--warn)}
+.step-num.s3{background:#d2a8ff30;color:var(--purple)}.step-num.s4{background:#3fb95030;color:var(--pos)}
+.step-num.s5{background:#58a6ff30;color:var(--accent)}
+.step h2{font-size:18px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+.card.full{margin-bottom:14px}
+.card h3{font-size:14px;margin-bottom:10px;font-weight:600}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:960px){.grid-2{grid-template-columns:1fr};.kpis{grid-template-columns:1fr 1fr}}
+canvas{max-height:280px}
+.neg{color:var(--neg)}.pos{color:var(--pos)}.warn{color:var(--warn)}.blue{color:var(--accent)}.purple{color:var(--purple)}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th{text-align:left;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.3px;background:#1a1f29}
+td{padding:7px 10px;border-bottom:1px solid #21262d}
+tr:hover td{background:#1c2128}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.event-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden}
+.event-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.event-card.e1::before{background:var(--neg)}.event-card.e2::before{background:var(--warn)}
+.event-card.e3::before{background:var(--accent)}.event-card.e4::before{background:var(--pos)}
+.event-head{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.event-asin{font-family:'Consolas','Courier New',monospace;font-weight:700;font-size:14px;padding:4px 10px;border-radius:4px;background:var(--bg);color:var(--accent)}
+.event-title{font-size:14px;font-weight:600;flex:1;color:var(--text)}
+.event-loss{font-size:18px;font-weight:700;color:var(--neg)}
+.event-loss.pos{color:var(--pos)}.event-loss.warn{color:var(--warn)}
+.event-body{color:var(--text);font-size:12px;line-height:1.7;margin-top:6px}
+.badge{padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;text-transform:uppercase;letter-spacing:.4px}
+.badge.expired{background:#f8514930;color:var(--neg)}
+.badge.aged{background:#d2992230;color:var(--warn)}
+.badge.lot{background:#58a6ff30;color:var(--accent)}
+.badge.removal{background:#d2a8ff30;color:var(--purple)}
+.src{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
+.src.api{background:#3fb95025;color:var(--pos);border:1px solid #3fb95050}
+.src.sb{background:#d2992225;color:var(--warn);border:1px solid #d2992250}
+.src.inf{background:#8b949e25;color:var(--muted);border:1px solid #8b949e50}
+.reco{background:var(--card);border-left:3px solid var(--pos);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:10px}
+.reco.warn{border-left-color:var(--warn)}.reco.neg{border-left-color:var(--neg)}
+.reco h4{color:var(--pos);font-size:13px;margin-bottom:6px}
+.reco.warn h4{color:var(--warn)}.reco.neg h4{color:var(--neg)}
+.reco p{font-size:12px;color:var(--text);line-height:1.6}
+.methodik{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 26px;margin-top:32px}
+.methodik h2{color:var(--accent);font-size:16px;margin-bottom:14px}
+.methodik h3{color:var(--text);font-size:13px;margin-top:14px;margin-bottom:6px;font-weight:600}
+.methodik p{font-size:12px;color:var(--text);line-height:1.7;margin-bottom:6px}
+.methodik code{background:var(--bg);padding:1px 6px;border-radius:3px;color:var(--warn);font-size:11px;font-family:monospace}
+.methodik ul{margin:6px 0 10px 22px;font-size:12px;line-height:1.8}
+.methodik .warn-box{background:#d2992215;border-left:3px solid var(--warn);padding:12px 16px;border-radius:0 6px 6px 0;margin-top:12px;font-size:12px;line-height:1.65}
+.methodik .warn-box b{color:var(--warn)}
+.lot-row{display:grid;grid-template-columns:90px 1fr 100px 100px 110px 1fr;gap:10px;padding:8px 12px;font-size:11px;border-bottom:1px solid #21262d;align-items:center}
+.lot-row.head{background:#1a1f29;font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.lot-row .asin{font-family:monospace;color:var(--accent);font-weight:700}
+.lot-row .qty{text-align:right;font-variant-numeric:tabular-nums}
+.lot-row .exp{color:var(--neg);font-weight:600}
+.footer{color:var(--muted);font-size:11px;text-align:center;margin-top:32px;padding-top:14px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<h1>TimberTaste DE -- Inventory-Aging-Loss-Analyse YTD <span style="background:var(--accent);color:#fff;padding:3px 10px;border-radius:4px;font-size:14px;margin-left:6px">DE ONLY</span></h1>
+<div class="sub">
+  <b style="color:var(--accent)">Was hat uns YTD durch abgelaufene + alternde Lagerware gekostet -- und wessen Schuld?</b> Drei Schuld-Kategorien: <b>INBOUND_MISMANAGEMENT</b> (Verkaufsdauer >12 Mo bei aktueller Velocity = wir haben zu viel inbounded). <b>GRENZWERTIG</b> (6-12 Mo). <b>FIFO_KRITISCH</b> (&lt;6 Mo = Amazons Reihenfolge entscheidend).
+  <br>Quellen: SP-API direkt (Removal Orders, Reimbursements, Removal Shipments) + Supabase (inventory_ledger, fba_inbound_items, fba_inventory_age, fba_storage_fees, sellerboard_daily, products) | Marketplace: <code style="color:var(--accent)">A1PA6795UKMFR9 (amazon.de)</code> | Currency: <code style="color:var(--accent)">EUR</code> | Zeitraum: <b>2026-01-01 bis 2026-04-28</b> | Stand: 2026-04-28
+</div>
+
+<div class="headline neg" style="border-left-color:var(--neg)">
+<b class="neg">
+Hauptschuld: WIR. Inbound-Mismanagement = 95% des Schadens.
+</b><br>
+Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71.740,48). <b>Davon Inbound-Mismanagement (= unsere Schuld): EUR 753,06 (95%).</b> Echtes FiFo-Risiko: nur EUR 20,48 (2.6%).
+<br>Aufgeschluesselt nach Posten: <b>EUR 532,05</b> COGS-Loss (292 EXPIRED-Units) + <b>EUR 264,57</b> Disposal-Fees + <b>EUR 356,14</b> Aging-Surcharge. Opportunity-Loss: <b>EUR 3.665,32</b>.
+<br><br>
+<b>Schuld-Aufteilung (datengetrieben aus Velocity-Check Jan-Feb 2026):</b>
+<ol>
+<li><span class="src inf">VERDICT</span> <b>INBOUND_MISMANAGEMENT: 283 Units = EUR 753,06 (95% des Schadens)</b> -- diese ASINs hatten Verkaufsdauer >12 Monate (Bestand / Velocity). Selbst bei perfektem FiFo waere die Charge nie verkauft worden. ASINs: <code>B0DCG1FPF8</code>, <code>B0FMLRSTT8</code>, <code>B0D6GXL2VP</code>.</li>
+<li><span class="src inf">VERDICT</span> <b>GRENZWERTIG: 4 Units = EUR 18,15 (2%)</b> -- Verkaufsdauer 6-12 Monate. Bei sauberem FiFo-Handling moeglicherweise vermeidbar gewesen, aber knapp.</li>
+<li><span class="src inf">VERDICT</span> <b>FIFO_KRITISCH: 5 Units = EUR 20,48 (2.6%)</b> -- Verkaufsdauer &lt;6 Monate. Hier waere Amazons Charge-Reihenfolge wirklich entscheidend gewesen. Diese Faelle sind die einzigen wo "Amazons FiFo-Verstoss" plausibel ist.</li>
+</ol>
+</div>
+
+<!-- VERDICT BREAKDOWN -->
+<div class="card" style="margin-bottom:24px">
+  <h3>Schuld-Aufteilung pro Verlust-Bucket <span class="src inf">Velocity-basiert</span></h3>
+  <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Pro ASIN berechnet: Avg-Velocity Jan-Feb 2026 (Stk/Monat) ÷ Avg-Lagerbestand Feb 2026 = Verkaufsdauer in Monaten. Lebensmittel-MHDs sind typisch 12-24 Monate. Liegt der Bestand drueber, ist FiFo irrelevant -- der Stock kann nie rotieren.</p>
+  <table>
+    <thead><tr><th>Bucket</th><th class="num">Units</th><th class="num">COGS+Disposal EUR</th><th class="num">% Schaden</th><th>Bedeutung</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge expired">INBOUND_MISMANAGEMENT</span></td>
+        <td class="num">283</td>
+        <td class="num neg">753,06</td>
+        <td class="num">95%</td>
+        <td style="font-size:11px">Wir haben mehr inbounded als Demand verkraftet (>12 Mo Verkaufsdauer)</td>
+      </tr>
+      <tr>
+        <td><span class="badge aged">GRENZWERTIG</span></td>
+        <td class="num">4</td>
+        <td class="num warn">18,15</td>
+        <td class="num">2%</td>
+        <td style="font-size:11px">6-12 Mo Verkaufsdauer -- bei sauberem FiFo evtl. vermeidbar</td>
+      </tr>
+      <tr>
+        <td><span class="badge removal">FIFO_KRITISCH</span></td>
+        <td class="num">5</td>
+        <td class="num">20,48</td>
+        <td class="num">2.6%</td>
+        <td style="font-size:11px">&lt;6 Mo Verkaufsdauer -- Amazons Reihenfolge entscheidend</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- KPI HERO -->
+<div class="kpis">
+  <div class="kpi pos">
+    <div class="l">Total Inventarschaden YTD</div>
+    <div class="v">EUR 1.152,76</div>
+    <div class="d">1.6% des YTD Profits</div>
+  </div>
+  <div class="kpi red">
+    <div class="l">EXPIRED Units (neu)</div>
+    <div class="v">292</div>
+    <div class="d">YTD COGS-Loss EUR 532,05</div>
+  </div>
+  <div class="kpi amber">
+    <div class="l">Aging-Surcharge</div>
+    <div class="v">EUR 356,14</div>
+    <div class="d">Erstmals im 2026-03</div>
+  </div>
+  <div class="kpi amber">
+    <div class="l">Aged 271+d Bestand</div>
+    <div class="v">234</div>
+    <div class="d">Snapshot 2026-04-28</div>
+  </div>
+  <div class="kpi red">
+    <div class="l">Inbound-Mismanagement</div>
+    <div class="v">95%</div>
+    <div class="d">EUR 753,06 (= unsere Schuld)</div>
+  </div>
+</div>
+
+<!-- Removal-Source Breakdown -->
+<div class="card" style="margin-bottom:24px">
+  <h3>Removal-Fees YTD nach Source <span class="src api">SP-API</span></h3>
+  <p style="color:var(--muted);font-size:11px;margin-bottom:8px">Wichtig fuer FiFo-Bewertung: Nur Amazon-initiated Aged/Expiring + Seller-Auto-Unfulfillable von EXPIRED-FNSKUs zaehlen als FiFo-attributable.</p>
+  <table>
+    <thead><tr><th>Source</th><th class="num">Fees EUR</th><th>FiFo-attributable?</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-size:11px">Seller-initiated Manual Removal</td>
+        <td class="num">2.171,71</td>
+        <td><span class="badge" style="background:var(--bg);color:var(--muted);border:1px solid var(--muted)">nein (eigene Entscheidung)</span></td>
+      </tr>
+      <tr>
+        <td style="font-size:11px">Seller-configured Automated Unfulfillable Removal System</td>
+        <td class="num">366,03</td>
+        <td><span class="badge" style="background:var(--bg);color:var(--warn);border:1px solid var(--warn)">teilweise (nur EXPIRED FNSKUs)</span></td>
+      </tr>
+      <tr>
+        <td style="font-size:11px">Amazon-initiated Automated Unfulfillable Removal System</td>
+        <td class="num">92,25</td>
+        <td><span class="badge" style="background:var(--bg);color:var(--muted);border:1px solid var(--muted)">nein (Defective)</span></td>
+      </tr>
+      <tr>
+        <td style="font-size:11px">Amazon-initiated Automated Expiring Removal System</td>
+        <td class="num">6,67</td>
+        <td><span class="badge" style="background:var(--bg);color:var(--pos);border:1px solid var(--pos)">ja (Amazon MHD-Trigger)</span></td>
+      </tr>
+      <tr>
+        <td style="font-size:11px">Amazon-initiated Automated Aged fulfillable Removal System</td>
+        <td class="num">3,48</td>
+        <td><span class="badge" style="background:var(--bg);color:var(--pos);border:1px solid var(--pos)">ja (Amazon FiFo-Trigger)</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- STEP 1: WAS PASSIERTE -->
+<div class="step">
+  <div class="step-head"><div class="step-num s1">1</div><h2>Was ist passiert -- MHD-Verfaelle YTD</h2></div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Storage Fees + Surcharge pro Monat <span class="src api">SP-API</span></h3>
+      <canvas id="storageChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>EXPIRED Units neu vs. zurueckgekauft pro Monat <span class="src api">SP-API</span></h3>
+      <canvas id="mhdChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: MHD-FIFO DRILL-DOWN -->
+<div class="step">
+  <div class="step-head"><div class="step-num s2">2</div><h2>MHD-FiFo Verstoesse -- ASIN Drill-Down</h2></div>
+
+  <div class="event-card e1">
+    <div class="event-head">
+      <span class="event-asin">B0DCG1FPF8</span>
+      <div class="event-title">OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert - 250ml - [4600mg/kg THYMO</div>
+      <div class="event-loss">EUR 502,20</div>
+    </div>
+    <div class="event-body">
+      <span class="badge expired">EXPIRED</span>
+      <span class="badge aged">270 Units neu verfallen</span>
+      <span class="badge removal">269 per VendorReturn entsorgt</span>
+      <br><br>
+      <b>YTD Sellerboard-Performance:</b> 31 Units verkauft, EUR 12,44 avg Preis, EUR 1,86 avg COGS, Net-Profit <b class="neg">EUR -307,18</b>.
+      <br>
+      <b>Direct Loss (COGS):</b> EUR 502,20 | <b>Disposal-Fee:</b> EUR 233,68 (269 Units, 1 Orders) | <b>Lost Revenue:</b> EUR 3.358,80
+      <br><br>
+      <span class="badge expired">VERDICT: INBOUND_MISMANAGEMENT</span>
+      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>8.0</b>/Mo | Lager Feb: <b>276</b> Units | Verkaufsdauer: <b>34.5 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 34.5 Monate bei aktueller Velocity (8.0/Mo) — viel zu viel inbounded, MHD haette nie ausgereicht.</span>
+      <br><b>FiFo-Indizien (Inbound-Charges):</b><ul style="margin:4px 0 0 22px"><li>Lot <code>3178</code> -- 66 Units, MHD <b>2025-12-24</b>: Lot lief vor YTD-Beginn ab — Amazon hatte 4+ Monate Zeit es zu verkaufen</li></ul>
+    </div>
+  </div>
+  <div class="event-card e2">
+    <div class="event-head">
+      <span class="event-asin">B0D6GXL2VP</span>
+      <div class="event-title">TIMBER TASTE® Salz &amp; Pfeffer Hochzeitsgeschenk Set - Geschenk zur Hochzeit mit A</div>
+      <div class="event-loss">EUR 5,28</div>
+    </div>
+    <div class="event-body">
+      <span class="badge expired">EXPIRED</span>
+      <span class="badge aged">12 Units neu verfallen</span>
+      <span class="badge removal">12 per VendorReturn entsorgt</span>
+      <br><br>
+      <b>YTD Sellerboard-Performance:</b> 28 Units verkauft, EUR 10,10 avg Preis, EUR 0,44 avg COGS, Net-Profit <b class="pos">EUR 65,69</b>.
+      <br>
+      <b>Direct Loss (COGS):</b> EUR 5,28 | <b>Disposal-Fee:</b> EUR 7,14 (12 Units, 1 Orders) | <b>Lost Revenue:</b> EUR 121,20
+      <br><br>
+      <span class="badge expired">VERDICT: INBOUND_MISMANAGEMENT</span>
+      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>3.5</b>/Mo | Lager Feb: <b>135</b> Units | Verkaufsdauer: <b>38.6 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 38.6 Monate bei aktueller Velocity (3.5/Mo) — viel zu viel inbounded, MHD haette nie ausgereicht.</span>
+      
+    </div>
+  </div>
+  <div class="event-card e2">
+    <div class="event-head">
+      <span class="event-asin">+7 ASINs</span>
+      <div class="event-title">Kleinere MHD-Events (&lt;5 Units pro ASIN, hauptsaechlich Single-Unit-Verfaelle)</div>
+      <div class="event-loss warn">EUR 24,57</div>
+    </div>
+    <div class="event-body">
+      Diese 7 ASINs hatten je 1-4 EXPIRED-Units. Summe: EUR 24,57 COGS-Loss. Im Rauschen.
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: INBOUND-FIFO (AGING SURCHARGES) -->
+<div class="step">
+  <div class="step-head"><div class="step-num s3">3</div><h2>Inbound-FiFo -- Aging Surcharges + 271+d Bestaende</h2></div>
+  <div class="card full">
+    <h3>Top ASINs nach Aging-Surcharge oder 271+d Bestand <span class="src api">SP-API</span></h3>
+    <table>
+      <thead>
+        <tr><th>ASIN</th><th>Titel</th><th class="num">Surcharge YTD</th><th class="num">Storage YTD</th><th class="num">181-270d</th><th class="num">271-365d</th><th class="num">365+d</th><th class="num">Verkauft YTD</th><th>FiFo-Indikator</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code style="color:var(--accent)">B0CJ5T7T6N</code></td>
+          <td style="font-size:11px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert |...</td>
+          <td class="num warn">8,90</td>
+          <td class="num">61,97</td>
+          <td class="num">952</td>
+          <td class="num warn">99</td>
+          <td class="num ">0</td>
+          <td class="num">307</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert trotz aktiver Verkaeufe</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0CJ5SRQTS</code></td>
+          <td style="font-size:11px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert -...</td>
+          <td class="num neg">50,52</td>
+          <td class="num">350,61</td>
+          <td class="num">1.188</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">432</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FML8CJQ1</code></td>
+          <td style="font-size:11px;color:var(--muted)">Nigella Schwarzkümmelöl Bio kaltgepresst 250ml – Ägypti...</td>
+          <td class="num neg">48,25</td>
+          <td class="num">320,94</td>
+          <td class="num">1.530</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">202</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0B6JG6LD1</code></td>
+          <td style="font-size:11px;color:var(--muted)">50 Stück Pocketfold Kraftpapier Hochzeitskarte blanko I...</td>
+          <td class="num warn">5,97</td>
+          <td class="num">49,64</td>
+          <td class="num">26</td>
+          <td class="num warn">73</td>
+          <td class="num ">0</td>
+          <td class="num">131</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert trotz aktiver Verkaeufe</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B09MGC2FVT</code></td>
+          <td style="font-size:11px;color:var(--muted)">HAVDSTEYG Pocketfold Karten 50 Stück + Umschlag I 135 x...</td>
+          <td class="num warn">5,43</td>
+          <td class="num">47,84</td>
+          <td class="num">0</td>
+          <td class="num warn">61</td>
+          <td class="num ">0</td>
+          <td class="num">89</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert trotz aktiver Verkaeufe</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0DT7FRB7B</code></td>
+          <td style="font-size:11px;color:var(--muted)">Nigella Schwarzkümmelöl Bio kaltgepresst 500ml | ungefi...</td>
+          <td class="num warn">16,34</td>
+          <td class="num">125,26</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">1.165</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FMLRSTT8</code></td>
+          <td style="font-size:11px;color:var(--muted)">Black Seed Oil Schwarzkümmelöl mit Orange-Minze Geschma...</td>
+          <td class="num warn">16,22</td>
+          <td class="num">106,41</td>
+          <td class="num">874</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">10</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FMKGLH4G</code></td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl bio gefiltert 500 ml – Ägyptisches Nige...</td>
+          <td class="num warn">15,78</td>
+          <td class="num">114,65</td>
+          <td class="num">302</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">525</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0DT7GDF98</code></td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl Bio kaltgepresst 500ml | ungefiltert, h...</td>
+          <td class="num warn">13,57</td>
+          <td class="num">101,32</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">467</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FVG1N5MZ</code></td>
+          <td style="font-size:11px;color:var(--muted)">BIO Schwarzkümmelöl Kapseln - 60 Stück, hochdosiert - 1...</td>
+          <td class="num warn">13,28</td>
+          <td class="num">87,06</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">136</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FVFZ43P4</code></td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl bio gefiltert 500 ml – Ägyptisches Nige...</td>
+          <td class="num warn">11,63</td>
+          <td class="num">76,07</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">9</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0DHYHWS5H</code></td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Ostergeschenke Erwachsene - BBQ Rub Set m...</td>
+          <td class="num warn">10,87</td>
+          <td class="num">75,80</td>
+          <td class="num">3</td>
+          <td class="num warn">1</td>
+          <td class="num ">0</td>
+          <td class="num">238</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert trotz aktiver Verkaeufe</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FVSJQWMJ</code></td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl ungefiltert 60 Stück - Grau - Kapsel Pa...</td>
+          <td class="num warn">10,99</td>
+          <td class="num">71,66</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">44</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FVF9QXT1</code></td>
+          <td style="font-size:11px;color:var(--muted)">Nigellio® Nigella Schwarzkümmelöl Bio kaltgepresst 500m...</td>
+          <td class="num warn">10,01</td>
+          <td class="num">73,61</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">128</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FJMQNLN6</code></td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl Bio 250ml Black Seed Oil | Kümmelöl Nig...</td>
+          <td class="num warn">9,96</td>
+          <td class="num">87,19</td>
+          <td class="num">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">1.613</td>
+          <td style="font-size:10px;color:var(--muted)">Lager altert ohne Verkaeufe (Slow-Mover)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- STEP 4: LOT-LEVEL PROOF -->
+<div class="step">
+  <div class="step-head"><div class="step-num s4">4</div><h2>Lot-Level FiFo-Beweis (chargengenaue Inbound-Daten)</h2></div>
+  <div class="card full">
+
+    <h3>Inbound-Lots mit MHD VOR YTD-Beginn (9 Lots) <span class="src api">FBA Inbound v2024</span></h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Diese Charges hatten bei Anlieferung MHDs die vor 2026-01-01 lagen. Ein FiFo-konformer Workflow haette sie vor Verfall verkaufen muessen.</p>
+    <div class="lot-row head"><div>ASIN</div><div>Titel</div><div class="qty">Qty</div><div class="qty">MHD</div><div class="qty">Inbound</div><div>Status</div></div>
+    <div class="lot-row">
+      <div class="asin">B08P3RHQT6</div>
+      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Ostergeschenk Mann - 5 exotische Gew</div>
+      <div class="qty">366</div>
+      <div class="qty exp">2024-08-27</div>
+      <div class="qty" style="color:var(--muted)">2023-07-18</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0BM1YY6F4</div>
+      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Italienische Gewürze Geschenkset - 5</div>
+      <div class="qty">244</div>
+      <div class="qty exp">2024-08-27</div>
+      <div class="qty" style="color:var(--muted)">2023-07-18</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0CMQXJG7B</div>
+      <div style="font-size:10px;color:var(--muted)"></div>
+      <div class="qty">288</div>
+      <div class="qty exp">2024-11-30</div>
+      <div class="qty" style="color:var(--muted)">2023-11-30</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0BFRQ33FL</div>
+      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Exotische Gewürze Geschenkset Frauen</div>
+      <div class="qty">244</div>
+      <div class="qty exp">2025-01-27</div>
+      <div class="qty" style="color:var(--muted)">2023-07-18</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0CJ5QT9C7</div>
+      <div style="font-size:10px;color:var(--muted)">OELESTO® BIO LEINSAMENÖL [500 ml] kaltgepresst - e</div>
+      <div class="qty">152</div>
+      <div class="qty exp">2025-03-09</div>
+      <div class="qty" style="color:var(--muted)">2024-08-07</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0CJ5T695Z</div>
+      <div style="font-size:10px;color:var(--muted)">OELESTO® BIO Hanföl [500ml] kaltgepresst - edles r</div>
+      <div class="qty">152</div>
+      <div class="qty exp">2025-04-29</div>
+      <div class="qty" style="color:var(--muted)">2024-08-07</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0CJ5TS97J</div>
+      <div style="font-size:10px;color:var(--muted)">OELESTO® BIO Hanföl [250ml] kaltgepresst - edles r</div>
+      <div class="qty">29</div>
+      <div class="qty exp">2025-04-29</div>
+      <div class="qty" style="color:var(--muted)">2024-08-07</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0CJFYGQ2C</div>
+      <div style="font-size:10px;color:var(--muted)"></div>
+      <div class="qty">48</div>
+      <div class="qty exp">2025-07-16</div>
+      <div class="qty" style="color:var(--muted)">2024-08-07</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+    <div class="lot-row">
+      <div class="asin">B0DCG1FPF8</div>
+      <div style="font-size:10px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefilt</div>
+      <div class="qty">66</div>
+      <div class="qty exp">2025-12-24</div>
+      <div class="qty" style="color:var(--muted)">2025-08-15</div>
+      <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
+    </div>
+
+  </div>
+  <div class="card full" style="margin-top:14px">
+    <h3>Hinweis zur Coverage <span class="src inf">Limitation</span></h3>
+    <p style="font-size:12px;color:var(--text);line-height:1.6">
+    Die <code>fba_inbound_items</code>-Tabelle wurde am 2026-04-28 via FBA Inbound v2024 API angelegt -- sie enthaelt nur Inbound-Plans, die zu diesem Stichtag noch in Amazons API verfuegbar waren. Aeltere geschickte Plans (>30 Tage) sind teilweise weg. Fuer eine wasserdichte historische FiFo-Analyse muesste die Pull frueher angesetzt werden. Ab jetzt (2026-04-28) gibt's wochenweise Snapshots <span class="src api">tt-fba-inbound-plans-weekly</span> -- die naechsten 6 Monate liefern saubere Lot-Level-Daten.
+    </p>
+  </div>
+</div>
+
+<!-- STEP 5: AGED-REMOVAL ACTIVITY -->
+<div class="step">
+  <div class="step-head"><div class="step-num s5">5</div><h2>Amazon's Auto-FiFo-System -- Aged-Removal-Activity</h2></div>
+  <div class="card full">
+    <h3>Aged-Removal Orders YTD <span class="src api">SP-API</span></h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Amazon-initiierte automatische Removal-Orders (Aged Fulfillable + Unfulfillable). Hohe <b>cancel</b>-Anteile zeigen, dass Amazon die Removal startet -- aber durch nachfolgenden Sell-Through wieder abbricht. Das ist ein Zeichen dass FiFo greift.</p>
+    <table>
+      <thead><tr><th>ASIN</th><th>FNSKU</th><th>Titel</th><th class="num">Requested</th><th class="num">Shipped</th><th class="num">Cancelled</th><th class="num">Orders</th><th>Bewertung</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code style="color:var(--accent)">B0DCG1FPF8</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">B0DCG1FPF8</td>
+          <td style="font-size:11px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ung</td>
+          <td class="num">271</td>
+          <td class="num neg">269</td>
+          <td class="num pos">2</td>
+          <td class="num">2</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FVF9QXT1</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X002F92SUH</td>
+          <td style="font-size:11px;color:var(--muted)">Nigellio® Nigella Schwarzkümmelöl Bio kaltgep</td>
+          <td class="num">95</td>
+          <td class="num ">0</td>
+          <td class="num pos">95</td>
+          <td class="num">3</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0FMLF4RHC</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X002DPURN3</td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl ungefiltert bio kaltgepresst </td>
+          <td class="num">81</td>
+          <td class="num ">0</td>
+          <td class="num pos">81</td>
+          <td class="num">9</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0DT7FRB7B</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">B0DT7FRB7B</td>
+          <td style="font-size:11px;color:var(--muted)">Nigella Schwarzkümmelöl Bio kaltgepresst 500m</td>
+          <td class="num">73</td>
+          <td class="num ">0</td>
+          <td class="num pos">73</td>
+          <td class="num">5</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0CJ5SRQTS</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">B0CJ5SRQTS</td>
+          <td style="font-size:11px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ung</td>
+          <td class="num">58</td>
+          <td class="num ">2</td>
+          <td class="num pos">22</td>
+          <td class="num">3</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0B6JG6LD1</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X001PVZ66T</td>
+          <td style="font-size:11px;color:var(--muted)">50 Stück Pocketfold Kraftpapier Hochzeitskart</td>
+          <td class="num">18</td>
+          <td class="num ">18</td>
+          <td class="num pos">0</td>
+          <td class="num">7</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0D6GXL2VP</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X0021VJE0L</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Salz &amp; Pfeffer Hochzeitsgeschen</td>
+          <td class="num">12</td>
+          <td class="num ">12</td>
+          <td class="num pos">0</td>
+          <td class="num">1</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B085LMJ91R</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X0015SU6F3</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Chili Gewürze Geschenkset - 5 G</td>
+          <td class="num">12</td>
+          <td class="num ">0</td>
+          <td class="num pos">12</td>
+          <td class="num">1</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B09MGC2FVT</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X001PW265R</td>
+          <td style="font-size:11px;color:var(--muted)">HAVDSTEYG Pocketfold Karten 50 Stück + Umschl</td>
+          <td class="num">10</td>
+          <td class="num ">10</td>
+          <td class="num pos">0</td>
+          <td class="num">6</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0CMPL7V3S</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X001WGI8RB</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® scharfe Soßen Set Saucen aus al</td>
+          <td class="num">8</td>
+          <td class="num ">4</td>
+          <td class="num pos">4</td>
+          <td class="num">5</td>
+          <td><span class="badge aged">Teil-Disposal</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0CJ5T7T6N</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">B0CJ5T7T6N</td>
+          <td style="font-size:11px;color:var(--muted)">OELESTO® BIO Schwarzkümmelöl kaltgepresst ung</td>
+          <td class="num">6</td>
+          <td class="num ">0</td>
+          <td class="num pos">6</td>
+          <td class="num">6</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0BFRSR79J</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X001MZNOFX</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Chili Geschenkset Frauen [bis 7</td>
+          <td class="num">4</td>
+          <td class="num ">4</td>
+          <td class="num pos">0</td>
+          <td class="num">1</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0DT7H1NWD</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">B0DT7H1NWD</td>
+          <td style="font-size:11px;color:var(--muted)">Schwarzkümmelöl Bio kaltgepresst ungefiltert </td>
+          <td class="num">4</td>
+          <td class="num ">0</td>
+          <td class="num pos">4</td>
+          <td class="num">1</td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0D8T7XTYT</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X0022QFWS3</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Salz &amp; Pfeffer Hochzeitsgeschen</td>
+          <td class="num">3</td>
+          <td class="num ">1</td>
+          <td class="num pos">2</td>
+          <td class="num">3</td>
+          <td><span class="badge aged">Teil-Disposal</span></td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--accent)">B0BFRQT8K1</code></td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">X001NLAYK9</td>
+          <td style="font-size:11px;color:var(--muted)">TIMBER TASTE® Chili &amp; Grillgewürze Geschenkse</td>
+          <td class="num">3</td>
+          <td class="num ">3</td>
+          <td class="num pos">0</td>
+          <td class="num">2</td>
+          <td><span class="badge expired">FiFo VERLOREN</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- STEP 6: RECOMMENDATIONS -->
+<div class="step">
+  <div class="step-head"><div class="step-num s4">6</div><h2>Empfehlungen</h2></div>
+
+  <div class="reco neg">
+    <h4>B0DCG1FPF8: Inbound stoppen (34.5 Mo Verkaufsdauer)</h4>
+    <p>OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert - 250m. <b>Velocity nur 8.0/Mo, aber 276 im Lager</b> = wuerde 34.5 Monate brauchen um zu rotieren. 270 Units sind YTD verfallen (EUR 735,88 Schaden). YTD Profit: <b>EUR -307,18</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+  </div>
+  <div class="reco neg">
+    <h4>B0D6GXL2VP: Inbound stoppen (38.6 Mo Verkaufsdauer)</h4>
+    <p>TIMBER TASTE® Salz &amp; Pfeffer Hochzeitsgeschenk Set - Geschen. <b>Velocity nur 3.5/Mo, aber 135 im Lager</b> = wuerde 38.6 Monate brauchen um zu rotieren. 12 Units sind YTD verfallen (EUR 12,42 Schaden). YTD Profit: <b>EUR 65,69</b>. <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+  </div>
+  <div class="reco neg">
+    <h4>B0FMLRSTT8: Inbound stoppen (252.3 Mo Verkaufsdauer)</h4>
+    <p>Black Seed Oil Schwarzkümmelöl mit Orange-Minze Geschmack (2. <b>Velocity nur 3.5/Mo, aber 883 im Lager</b> = wuerde 252.3 Monate brauchen um zu rotieren. 1 Units sind YTD verfallen (EUR 4,76 Schaden). YTD Profit: <b>EUR -106,68</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+  </div>
+  <div class="reco warn">
+    <h4>Aging-Surcharge ab 2026-03: EUR 356,14 -- wird weiter steigen</h4>
+    <p>Top-Beitraege: B0CJ5SRQTS (EUR 50,52) + B0FML8CJQ1 (EUR 48,25). Diese ASINs verkaufen, aber Lagerbestand zu hoch fuer Throughput. <b>Empfehlung:</b> Inbound-Quantitaeten halbieren bis Aging-Bucket leer. Sonst multipliziert sich der Surcharge in den naechsten 3-6 Monaten.</p>
+  </div>
+  <div class="reco warn">
+    <h4>Echte FiFo-Risiko-Faelle: 12 ASINs</h4>
+    <p>Diese ASINs hatten Verkaufsdauer &lt;6 Monate -- bei MHD-Charge waere Amazons Reihenfolge entscheidend. Wenn diese Faelle wiederkehren, Beschwerde an Amazon Account Manager (CFR/EOS-Reklamation) sinnvoll. Aktuell betroffen: <code>B0CMPL7V3S</code> (3u), <code>B08P3T3ZRG</code> (1u), <code>B07TL8T5T8</code> (0u), <code>B0DT7H1NWD</code> (0u), <code>B0BFRRFLDF</code> (0u).</p>
+  </div>
+  <div class="reco warn">
+    <h4>Hauptursache: Inbound-Mismanagement (95% des Schadens)</h4>
+    <p>Das ist <b>nicht Amazons Schuld</b>, sondern unsere Inbound-Entscheidungen. Sofort-Hebel: (1) Re-Order-Trigger an Sell-Through-Velocity koppeln (max. 6 Monate Bestand), nicht an Lagerlimit, (2) MHD-Tracking pro Charge in Sellerboard verankern, (3) Quartals-Review der Slow-Mover -- wenn &lt; 30/Monat Velocity bei Lebensmitteln, ASIN closen oder Bundle umstrukturieren.</p>
+  </div>
+</div>
+
+<!-- METHODIK -->
+<div class="methodik">
+  <h2>Methodik + Datenquellen</h2>
+
+  <h3>Was die Analyse misst</h3>
+  <p>Den <b>Inventarschaden YTD 2026</b> aus Lebensmittel-MHD + Aging-Surcharges -- und die <b>Schuld-Aufteilung</b>:</p>
+  <ul>
+    <li><b>Inventarschaden = COGS verbrannter Stueck + Disposal-Fees + Aging-Surcharge.</b> Quellen: SP-API <code>inventory_ledger</code> (EXPIRED Adjustments), <code>removal_orders</code> (Disposal-Fees), <code>fba_storage_fees</code> (Surcharge). Sellerboard COGS pro Stueck.</li>
+    <li><b>Schuld-Aufteilung via Velocity-Check:</b> Pro betroffener ASIN wird Avg-Velocity Jan-Feb 2026 (vor MHD-Crash) vs. Avg-Lagerbestand Feb 2026 verglichen. Daraus = <b>Verkaufsdauer in Monaten</b>. Lebensmittel-MHDs sind typisch 12-24 Monate. Liegt Verkaufsdauer drueber, war FiFo irrelevant -- Stock konnte nie rotieren = unsere Schuld (zu viel inbounded).</li>
+  </ul>
+  <p><b>Schwellwerte:</b> &lt;6 Mo = FIFO_KRITISCH (Amazons Reihenfolge entscheidend). 6-12 Mo = GRENZWERTIG. >12 Mo = INBOUND_MISMANAGEMENT (unsere Schuld).</p>
+  <p><b>Wichtig:</b> Diese Analyse beweist nicht dass Amazon den FiFo-Grundsatz verletzt hat. Charge-Level Outbound-Tracking gibt's nicht in der SP-API. Was wir messen ist <b>"haette FiFo den Unterschied gemacht?"</b> -- bei >12 Mo Verkaufsdauer ganz klar nein.</p>
+
+  <h3>Datenquellen im Detail</h3>
+  <ul>
+    <li><span class="src api">SP-API</span> <code>GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA</code> -- 27 Aged-Removal-Orders YTD</li>
+    <li><span class="src api">SP-API</span> <code>GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA</code> -- 202 Removal-Shipments YTD</li>
+    <li><span class="src api">SP-API</span> <code>GET_FBA_REIMBURSEMENTS_DATA</code> -- 1010 Reimbursements YTD</li>
+    <li><span class="src api">Supabase</span> <code>inventory_ledger</code> -- 441 Rows (Feb-Mar 2026)</li>
+    <li><span class="src api">Supabase</span> <code>fba_inbound_items</code> -- 5 Inbound-Lots mit chargengenauen MHDs (NEU 2026-04-28)</li>
+    <li><span class="src api">Supabase</span> <code>fba_inventory_age</code> -- Snapshot 2026-04-28, 58 ASINs</li>
+    <li><span class="src api">Supabase</span> <code>fba_storage_fees</code> -- 177 Rows YTD DE</li>
+    <li><span class="src sb">Sellerboard</span> <code>sellerboard_daily</code> -- 9.448 Rows YTD DE fuer COGS, Profit, Avg Price</li>
+  </ul>
+
+  <h3>Limitierungen + Caveats</h3>
+  <div class="warn-box">
+    <b>Pre-Lot-Era (Jan-Mitte Apr 2026):</b> Die <code>fba_inbound_items</code>-Tabelle wurde erst 2026-04-28 angelegt. Fuer Jan-Apr existieren chargengenaue MHDs nur fuer Inbound-Plans, die zu diesem Stichtag noch in Amazons API verfuegbar waren. EXPIRED-Events koennen daher nur indiziell mit Inbound-Charges verknuepft werden (32 Lots im Datensatz).
+    <br><br>
+    <b>Inventory_ledger Coverage:</b> Aktueller Sync hat nur Feb + Mar 2026 -- Jan + Apr fehlen. Das macht die "292 EXPIRED Units neu YTD"-Zahl konservativ. April-Daten kommen erst beim naechsten Monthly-Inventory-Report rein.
+    <br><br>
+    <b>Aged-Removal-Fees:</b> SP-API liefert leere <code>removal-fee</code>-Spalten -- Aged-Removal ist seit 2024 fuer DE gratis (Amazon kuemmert sich um die Disposal-Kosten selber bei eigenem Trigger). Das ist KEIN Datenfehler, sondern Amazons Policy. Daher ist <b>Disposal-Fee-Loss YTD = 0 EUR</b>, was auch im Total-Loss reflektiert wird.
+    <br><br>
+    <b>Lost-Revenue ist Schaetzwert:</b> EXPIRED-Units * Avg Price ist Best-Case-Annahme (alles haette sich verkauft). In der Realitaet ist Sell-Through-Wahrscheinlichkeit < 100%. Daher ist Lost-Revenue separat ausgewiesen und nicht im Total-Loss.
+  </div>
+
+  <h3>Reproduzierbarkeit</h3>
+  <p>Daten-Pull: <code>python 02_ops_execution/02_client_operations/timbertaste/scripts/fetch_de_fee_reports.py 2026-01-01</code> + <code>python build_fifo_analysis_data.py</code> -> JSON in <code>analysis/tt_de_fifo_data.json</code>.<br>
+  HTML-Render: <code>python build_fifo_analysis_html.py</code> -> dieses Dokument.</p>
+</div>
+
+<div class="footer">
+  Generiert 2026-01-01 bis 2026-04-28 | Adlevate Workspace | TT DE Inventory-Aging-Loss YTD 2026
+</div>
+
+<script>
+const ctx1 = document.getElementById('storageChart');
+new Chart(ctx1, {
+  type: 'bar',
+  data: {
+    labels: 252.3,
+    datasets: [
+      {label: 'Storage Fee', data: [1014.8, 843.06, 1099.45], backgroundColor: '#d29922cc'},
+      {label: 'Aging Surcharge', data: [0.0, 0.0, 356.14], backgroundColor: '#f85149cc'}
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {legend:{labels:{color:'#c9d1d9'}}},
+    scales: {
+      x: {ticks:{color:'#8b949e'}, grid:{color:'#21262d'}},
+      y: {ticks:{color:'#8b949e', callback:v=>'EUR '+v}, grid:{color:'#21262d'}, stacked:false}
+    }
+  }
+});
+
+const ctx2 = document.getElementById('mhdChart');
+const mhdMonths = ["2026-02", "2026-03"];
+const mhdNew = [274, 18];
+const mhdReturned = [166, 283];
+new Chart(ctx2, {
+  type: 'bar',
+  data: {
+    labels: mhdMonths,
+    datasets: [
+      {label: 'EXPIRED neu (Adjustments)', data: mhdNew, backgroundColor: '#f85149cc'},
+      {label: 'EXPIRED entsorgt (VendorReturns)', data: mhdReturned, backgroundColor: '#8b949ecc'}
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {legend:{labels:{color:'#c9d1d9'}}},
+    scales: {
+      x: {ticks:{color:'#8b949e'}, grid:{color:'#21262d'}},
+      y: {ticks:{color:'#8b949e'}, grid:{color:'#21262d'}}
+    }
+  }
+});
+</script>
+</body>
+</html>
