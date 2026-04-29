@@ -83,53 +83,62 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <h1>TimberTaste DE -- Inventory-Aging-Loss-Analyse YTD <span style="background:var(--accent);color:#fff;padding:3px 10px;border-radius:4px;font-size:14px;margin-left:6px">DE ONLY</span></h1>
 <div class="sub">
-  <b style="color:var(--accent)">Was hat uns YTD durch abgelaufene + alternde Lagerware gekostet -- und wessen Schuld?</b> Drei Schuld-Kategorien: <b>INBOUND_MISMANAGEMENT</b> (Verkaufsdauer >12 Mo bei aktueller Velocity = wir haben zu viel inbounded). <b>GRENZWERTIG</b> (6-12 Mo). <b>FIFO_KRITISCH</b> (&lt;6 Mo = Amazons Reihenfolge entscheidend).
+  <b style="color:var(--accent)">Was hat uns YTD durch abgelaufene + alternde Lagerware gekostet -- und haette FiFo den Schaden verhindern koennen?</b> Velocity-basierte Klassifikation pro ASIN: <b>INBOUND_MISMANAGEMENT</b> (>12 Mo Verkaufsdauer = FiFo haette nicht gerettet). <b>GRENZWERTIG</b> (6-12 Mo). <b>FIFO_KRITISCH</b> (&lt;6 Mo = Reimbursement-Claim plausibel). Plus <b>AGING_SURCHARGE</b> (Inbound-FiFo, Storage-Aufschlag fuer Altbestand).
   <br>Quellen: SP-API direkt (Removal Orders, Reimbursements, Removal Shipments) + Supabase (inventory_ledger, fba_inbound_items, fba_inventory_age, fba_storage_fees, sellerboard_daily, products) | Marketplace: <code style="color:var(--accent)">A1PA6795UKMFR9 (amazon.de)</code> | Currency: <code style="color:var(--accent)">EUR</code> | Zeitraum: <b>2026-01-01 bis 2026-04-28</b> | Stand: 2026-04-28
 </div>
 
-<div class="headline neg" style="border-left-color:var(--neg)">
-<b class="neg">
-Hauptschuld: WIR. Inbound-Mismanagement = 95% des Schadens.
+<div class="headline" style="border-left-color:var(--warn)">
+<b class="warn">
+64% des Schadens haetten durch FiFo NICHT vermieden werden koennen — Inbound-Demand-Mismatch dominiert.
 </b><br>
-Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71.740,48). <b>Davon Inbound-Mismanagement (= unsere Schuld): EUR 753,06 (95%).</b> Echtes FiFo-Risiko: nur EUR 20,48 (2.6%).
-<br>Aufgeschluesselt nach Posten: <b>EUR 532,05</b> COGS-Loss (292 EXPIRED-Units) + <b>EUR 264,57</b> Disposal-Fees + <b>EUR 356,14</b> Aging-Surcharge. Opportunity-Loss: <b>EUR 3.665,32</b>.
+Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71.740,48).
 <br><br>
-<b>Schuld-Aufteilung (datengetrieben aus Velocity-Check Jan-Feb 2026):</b>
-<ol>
-<li><span class="src inf">VERDICT</span> <b>INBOUND_MISMANAGEMENT: 283 Units = EUR 753,06 (95% des Schadens)</b> -- diese ASINs hatten Verkaufsdauer >12 Monate (Bestand / Velocity). Selbst bei perfektem FiFo waere die Charge nie verkauft worden. ASINs: <code>B0DCG1FPF8</code>, <code>B0FMLRSTT8</code>, <code>B0D6GXL2VP</code>.</li>
-<li><span class="src inf">VERDICT</span> <b>GRENZWERTIG: 4 Units = EUR 18,15 (2%)</b> -- Verkaufsdauer 6-12 Monate. Bei sauberem FiFo-Handling moeglicherweise vermeidbar gewesen, aber knapp.</li>
-<li><span class="src inf">VERDICT</span> <b>FIFO_KRITISCH: 5 Units = EUR 20,48 (2.6%)</b> -- Verkaufsdauer &lt;6 Monate. Hier waere Amazons Charge-Reihenfolge wirklich entscheidend gewesen. Diese Faelle sind die einzigen wo "Amazons FiFo-Verstoss" plausibel ist.</li>
-</ol>
+<b>Schuld-Aufteilung (alle % vom Total Inventarschaden):</b>
+<ul style="margin:6px 0 0 22px;line-height:1.9">
+<li><b>64%</b> (EUR 740,64) — <b>FiFo haette nicht gerettet</b> (Verkaufsdauer >12 Mo). Stock war fuer Demand zu gross. Ursache: Inbound-Entscheidung.</li>
+<li><b>3%</b> (EUR 38,63) — <b>FiFo waere entscheidend gewesen</b> (Verkaufsdauer &lt;6 Mo). Charge mit kuerzerem MHD haette zuerst raus muessen. <i>Hier ist Reimbursement-Claim plausibel.</i></li>
+<li><b>1%</b> (EUR 12,42) — Grenzwertig (6-12 Mo).</li>
+<li><b>31%</b> (EUR 356,14) — Aging-Surcharge (Inbound-FiFo, nicht velocity-klassifiziert).</li>
+
+</ul>
 </div>
 
 <!-- VERDICT BREAKDOWN -->
 <div class="card" style="margin-bottom:24px">
   <h3>Schuld-Aufteilung pro Verlust-Bucket <span class="src inf">Velocity-basiert</span></h3>
-  <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Pro ASIN berechnet: Avg-Velocity Jan-Feb 2026 (Stk/Monat) ÷ Avg-Lagerbestand Feb 2026 = Verkaufsdauer in Monaten. Lebensmittel-MHDs sind typisch 12-24 Monate. Liegt der Bestand drueber, ist FiFo irrelevant -- der Stock kann nie rotieren.</p>
+  <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Pro ASIN: Avg-Verkaufs-Velocity ueber 6 Monate (Sep 2025 - Feb 2026, faengt Q4-Saisonalitaet) ÷ Avg-Lagerbestand Feb 2026 = Verkaufsdauer. Bei Lebensmitteln (MHD typisch 12-24 Mo): Liegt Verkaufsdauer drueber, war Stock zu gross fuer Demand -- FiFo irrelevant. Liegt drunter, war FiFo entscheidend.</p>
   <table>
-    <thead><tr><th>Bucket</th><th class="num">Units</th><th class="num">COGS+Disposal EUR</th><th class="num">% Schaden</th><th>Bedeutung</th></tr></thead>
+    <thead><tr><th>Bucket</th><th class="num">Units</th><th class="num">Schaden EUR</th><th class="num">% von Total</th><th>Bedeutung</th></tr></thead>
     <tbody>
       <tr>
         <td><span class="badge expired">INBOUND_MISMANAGEMENT</span></td>
-        <td class="num">283</td>
-        <td class="num neg">753,06</td>
-        <td class="num">95%</td>
-        <td style="font-size:11px">Wir haben mehr inbounded als Demand verkraftet (>12 Mo Verkaufsdauer)</td>
+        <td class="num">271</td>
+        <td class="num neg">740,64</td>
+        <td class="num neg">64%</td>
+        <td style="font-size:11px">Verkaufsdauer >12 Mo — FiFo haette nicht gerettet</td>
       </tr>
       <tr>
         <td><span class="badge aged">GRENZWERTIG</span></td>
-        <td class="num">4</td>
-        <td class="num warn">18,15</td>
-        <td class="num">2%</td>
-        <td style="font-size:11px">6-12 Mo Verkaufsdauer -- bei sauberem FiFo evtl. vermeidbar</td>
+        <td class="num">12</td>
+        <td class="num warn">12,42</td>
+        <td class="num">1.1%</td>
+        <td style="font-size:11px">6-12 Mo — bei sauberem FiFo evtl. vermeidbar</td>
       </tr>
       <tr>
         <td><span class="badge removal">FIFO_KRITISCH</span></td>
-        <td class="num">5</td>
-        <td class="num">20,48</td>
-        <td class="num">2.6%</td>
-        <td style="font-size:11px">&lt;6 Mo Verkaufsdauer -- Amazons Reihenfolge entscheidend</td>
+        <td class="num">9</td>
+        <td class="num neg">38,63</td>
+        <td class="num neg">3.4%</td>
+        <td style="font-size:11px">&lt;6 Mo — Amazons Reihenfolge entscheidend (<b>Reimbursement-Claim moeglich</b>)</td>
       </tr>
+      <tr>
+        <td><span class="badge" style="background:#d2992230;color:var(--warn)">AGING_SURCHARGE</span></td>
+        <td class="num">—</td>
+        <td class="num warn">356,14</td>
+        <td class="num">30.9%</td>
+        <td style="font-size:11px">Inbound-FiFo (Storage-Aufschlag fuer langliegenden Bestand)</td>
+      </tr>
+      
     </tbody>
   </table>
 </div>
@@ -156,10 +165,10 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
     <div class="v">234</div>
     <div class="d">Snapshot 2026-04-28</div>
   </div>
-  <div class="kpi red">
-    <div class="l">Inbound-Mismanagement</div>
-    <div class="v">95%</div>
-    <div class="d">EUR 753,06 (= unsere Schuld)</div>
+  <div class="kpi amber">
+    <div class="l">FiFo haette gerettet</div>
+    <div class="v">3%</div>
+    <div class="d">EUR 38,63 (Reimbursement-Pfad)</div>
   </div>
 </div>
 
@@ -234,8 +243,8 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
       <b>Direct Loss (COGS):</b> EUR 502,20 | <b>Disposal-Fee:</b> EUR 233,68 (269 Units, 1 Orders) | <b>Lost Revenue:</b> EUR 3.358,80
       <br><br>
       <span class="badge expired">VERDICT: INBOUND_MISMANAGEMENT</span>
-      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>8.0</b>/Mo | Lager Feb: <b>276</b> Units | Verkaufsdauer: <b>34.5 Mo</b></span>
-      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 34.5 Monate bei aktueller Velocity (8.0/Mo) — viel zu viel inbounded, MHD haette nie ausgereicht.</span>
+      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>3.8</b>/Mo | Lager Feb: <b>276</b> Units | Verkaufsdauer: <b>72.6 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 72.6 Monate bei 3.8/Mo (Avg 6 Mo). FiFo haette diesen Verlust NICHT verhindern koennen — Stock war von Anfang an zu gross fuer Demand.</span>
       <br><b>FiFo-Indizien (Inbound-Charges):</b><ul style="margin:4px 0 0 22px"><li>Lot <code>3178</code> -- 66 Units, MHD <b>2025-12-24</b>: Lot lief vor YTD-Beginn ab — Amazon hatte 4+ Monate Zeit es zu verkaufen</li></ul>
     </div>
   </div>
@@ -254,9 +263,9 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
       <br>
       <b>Direct Loss (COGS):</b> EUR 5,28 | <b>Disposal-Fee:</b> EUR 7,14 (12 Units, 1 Orders) | <b>Lost Revenue:</b> EUR 121,20
       <br><br>
-      <span class="badge expired">VERDICT: INBOUND_MISMANAGEMENT</span>
-      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>3.5</b>/Mo | Lager Feb: <b>135</b> Units | Verkaufsdauer: <b>38.6 Mo</b></span>
-      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 38.6 Monate bei aktueller Velocity (3.5/Mo) — viel zu viel inbounded, MHD haette nie ausgereicht.</span>
+      <span class="badge aged">VERDICT: GRENZWERTIG</span>
+      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>13.8</b>/Mo | Lager Feb: <b>135</b> Units | Verkaufsdauer: <b>9.8 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 9.8 Monate bei 13.8/Mo (Avg 6 Mo). Grenzbereich — FiFo haette evtl. den Unterschied gemacht.</span>
       
     </div>
   </div>
@@ -461,17 +470,17 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
     <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Diese Charges hatten bei Anlieferung MHDs die vor 2026-01-01 lagen. Ein FiFo-konformer Workflow haette sie vor Verfall verkaufen muessen.</p>
     <div class="lot-row head"><div>ASIN</div><div>Titel</div><div class="qty">Qty</div><div class="qty">MHD</div><div class="qty">Inbound</div><div>Status</div></div>
     <div class="lot-row">
-      <div class="asin">B08P3RHQT6</div>
-      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Ostergeschenk Mann - 5 exotische Gew</div>
-      <div class="qty">366</div>
+      <div class="asin">B0BM1YY6F4</div>
+      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Italienische Gewürze Geschenkset - 5</div>
+      <div class="qty">244</div>
       <div class="qty exp">2024-08-27</div>
       <div class="qty" style="color:var(--muted)">2023-07-18</div>
       <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
     </div>
     <div class="lot-row">
-      <div class="asin">B0BM1YY6F4</div>
-      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Italienische Gewürze Geschenkset - 5</div>
-      <div class="qty">244</div>
+      <div class="asin">B08P3RHQT6</div>
+      <div style="font-size:10px;color:var(--muted)">TIMBER TASTE® Ostergeschenk Mann - 5 exotische Gew</div>
+      <div class="qty">366</div>
       <div class="qty exp">2024-08-27</div>
       <div class="qty" style="color:var(--muted)">2023-07-18</div>
       <div style="font-size:10px;color:var(--warn)">MHD vor 2026-01-01 erreicht — Charge gilt als FiFo-Risiko</div>
@@ -542,14 +551,14 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
   </div>
 </div>
 
-<!-- STEP 5: AGED-REMOVAL ACTIVITY -->
+<!-- STEP 5: AGED-REMOVAL ACTIVITY (NEUTRAL) -->
 <div class="step">
-  <div class="step-head"><div class="step-num s5">5</div><h2>Amazon's Auto-FiFo-System -- Aged-Removal-Activity</h2></div>
+  <div class="step-head"><div class="step-num s5">5</div><h2>Aged-Removal-Activity (Inventory-Rotation-Indikator)</h2></div>
   <div class="card full">
-    <h3>Aged-Removal Orders YTD <span class="src api">SP-API</span></h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Amazon-initiierte automatische Removal-Orders (Aged Fulfillable + Unfulfillable). Hohe <b>cancel</b>-Anteile zeigen, dass Amazon die Removal startet -- aber durch nachfolgenden Sell-Through wieder abbricht. Das ist ein Zeichen dass FiFo greift.</p>
+    <h3>Automated Aged-Removal Orders YTD <span class="src api">SP-API</span></h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:10px"><b>Wichtig:</b> Diese Tabelle ist <b>kein FiFo-Beweis</b>. Cancel/Shipped-Quote zeigt nur ob Demand nachkam, nicht ob Amazon FiFo eingehalten hat. Nutze als <i>Indikator fuer Inventory-Rotation-Health</i>: hohe Cancel-Quote = Bestand rotiert noch, niedrige = Stock ist tot.</p>
     <table>
-      <thead><tr><th>ASIN</th><th>FNSKU</th><th>Titel</th><th class="num">Requested</th><th class="num">Shipped</th><th class="num">Cancelled</th><th class="num">Orders</th><th>Bewertung</th></tr></thead>
+      <thead><tr><th>ASIN</th><th>FNSKU</th><th>Titel</th><th class="num">Requested</th><th class="num">Shipped</th><th class="num">Cancelled</th><th class="num">Orders</th><th>Rotation-Status</th></tr></thead>
       <tbody>
         <tr>
           <td><code style="color:var(--accent)">B0DCG1FPF8</code></td>
@@ -559,7 +568,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num neg">269</td>
           <td class="num pos">2</td>
           <td class="num">2</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0FVF9QXT1</code></td>
@@ -569,7 +578,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">95</td>
           <td class="num">3</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0FMLF4RHC</code></td>
@@ -579,7 +588,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">81</td>
           <td class="num">9</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0DT7FRB7B</code></td>
@@ -589,7 +598,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">73</td>
           <td class="num">5</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0CJ5SRQTS</code></td>
@@ -599,7 +608,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">2</td>
           <td class="num pos">22</td>
           <td class="num">3</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0B6JG6LD1</code></td>
@@ -609,7 +618,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">18</td>
           <td class="num pos">0</td>
           <td class="num">7</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0D6GXL2VP</code></td>
@@ -619,7 +628,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">12</td>
           <td class="num pos">0</td>
           <td class="num">1</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B085LMJ91R</code></td>
@@ -629,7 +638,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">12</td>
           <td class="num">1</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B09MGC2FVT</code></td>
@@ -639,7 +648,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">10</td>
           <td class="num pos">0</td>
           <td class="num">6</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0CMPL7V3S</code></td>
@@ -649,7 +658,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">4</td>
           <td class="num pos">4</td>
           <td class="num">5</td>
-          <td><span class="badge aged">Teil-Disposal</span></td>
+          <td><span class="badge aged">Teilweise rotiert</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0CJ5T7T6N</code></td>
@@ -659,7 +668,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">6</td>
           <td class="num">6</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0BFRSR79J</code></td>
@@ -669,7 +678,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">4</td>
           <td class="num pos">0</td>
           <td class="num">1</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0DT7H1NWD</code></td>
@@ -679,7 +688,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">0</td>
           <td class="num pos">4</td>
           <td class="num">1</td>
-          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Cancelled = Sell-Through</span></td>
+          <td><span class="badge" style="background:#3fb95025;color:var(--pos)">Stock rotiert noch</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0D8T7XTYT</code></td>
@@ -689,7 +698,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">1</td>
           <td class="num pos">2</td>
           <td class="num">3</td>
-          <td><span class="badge aged">Teil-Disposal</span></td>
+          <td><span class="badge aged">Teilweise rotiert</span></td>
         </tr>
         <tr>
           <td><code style="color:var(--accent)">B0BFRQT8K1</code></td>
@@ -699,7 +708,7 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
           <td class="num ">3</td>
           <td class="num pos">0</td>
           <td class="num">2</td>
-          <td><span class="badge expired">FiFo VERLOREN</span></td>
+          <td><span class="badge expired">Stock tot</span></td>
         </tr>
       </tbody>
     </table>
@@ -711,28 +720,24 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
   <div class="step-head"><div class="step-num s4">6</div><h2>Empfehlungen</h2></div>
 
   <div class="reco neg">
-    <h4>B0DCG1FPF8: Inbound stoppen (34.5 Mo Verkaufsdauer)</h4>
-    <p>OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert - 250m. <b>Velocity nur 8.0/Mo, aber 276 im Lager</b> = wuerde 34.5 Monate brauchen um zu rotieren. 270 Units sind YTD verfallen (EUR 735,88 Schaden). YTD Profit: <b>EUR -307,18</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+    <h4>B0DCG1FPF8: Inbound stoppen (72.6 Mo Verkaufsdauer)</h4>
+    <p>OELESTO® BIO Schwarzkümmelöl kaltgepresst ungefiltert - 250m. <b>Velocity nur 3.8/Mo, aber 276 im Lager</b> = wuerde 72.6 Monate brauchen um zu rotieren. 270 Units sind YTD verfallen (EUR 735,88 Schaden). YTD Profit: <b>EUR -307,18</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
   </div>
   <div class="reco neg">
-    <h4>B0D6GXL2VP: Inbound stoppen (38.6 Mo Verkaufsdauer)</h4>
-    <p>TIMBER TASTE® Salz &amp; Pfeffer Hochzeitsgeschenk Set - Geschen. <b>Velocity nur 3.5/Mo, aber 135 im Lager</b> = wuerde 38.6 Monate brauchen um zu rotieren. 12 Units sind YTD verfallen (EUR 12,42 Schaden). YTD Profit: <b>EUR 65,69</b>. <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+    <h4>B0FMLRSTT8: Inbound stoppen (135.8 Mo Verkaufsdauer)</h4>
+    <p>Black Seed Oil Schwarzkümmelöl mit Orange-Minze Geschmack (2. <b>Velocity nur 6.5/Mo, aber 883 im Lager</b> = wuerde 135.8 Monate brauchen um zu rotieren. 1 Units sind YTD verfallen (EUR 4,76 Schaden). YTD Profit: <b>EUR -106,68</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
   </div>
   <div class="reco neg">
-    <h4>B0FMLRSTT8: Inbound stoppen (252.3 Mo Verkaufsdauer)</h4>
-    <p>Black Seed Oil Schwarzkümmelöl mit Orange-Minze Geschmack (2. <b>Velocity nur 3.5/Mo, aber 883 im Lager</b> = wuerde 252.3 Monate brauchen um zu rotieren. 1 Units sind YTD verfallen (EUR 4,76 Schaden). YTD Profit: <b>EUR -106,68</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+    <h4>B0FVF9QXT1: Inbound stoppen (29.0 Mo Verkaufsdauer)</h4>
+    <p>Nigellio® Nigella Schwarzkümmelöl Bio kaltgepresst 500ml – u. <b>Velocity nur 14.5/Mo, aber 421 im Lager</b> = wuerde 29.0 Monate brauchen um zu rotieren. 0 Units sind YTD verfallen (EUR 0,00 Schaden). YTD Profit: <b>EUR 664,26</b>. <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
   </div>
   <div class="reco warn">
     <h4>Aging-Surcharge ab 2026-03: EUR 356,14 -- wird weiter steigen</h4>
     <p>Top-Beitraege: B0CJ5SRQTS (EUR 50,52) + B0FML8CJQ1 (EUR 48,25). Diese ASINs verkaufen, aber Lagerbestand zu hoch fuer Throughput. <b>Empfehlung:</b> Inbound-Quantitaeten halbieren bis Aging-Bucket leer. Sonst multipliziert sich der Surcharge in den naechsten 3-6 Monaten.</p>
   </div>
   <div class="reco warn">
-    <h4>Echte FiFo-Risiko-Faelle: 12 ASINs</h4>
-    <p>Diese ASINs hatten Verkaufsdauer &lt;6 Monate -- bei MHD-Charge waere Amazons Reihenfolge entscheidend. Wenn diese Faelle wiederkehren, Beschwerde an Amazon Account Manager (CFR/EOS-Reklamation) sinnvoll. Aktuell betroffen: <code>B0CMPL7V3S</code> (3u), <code>B08P3T3ZRG</code> (1u), <code>B07TL8T5T8</code> (0u), <code>B0DT7H1NWD</code> (0u), <code>B0BFRRFLDF</code> (0u).</p>
-  </div>
-  <div class="reco warn">
-    <h4>Hauptursache: Inbound-Mismanagement (95% des Schadens)</h4>
-    <p>Das ist <b>nicht Amazons Schuld</b>, sondern unsere Inbound-Entscheidungen. Sofort-Hebel: (1) Re-Order-Trigger an Sell-Through-Velocity koppeln (max. 6 Monate Bestand), nicht an Lagerlimit, (2) MHD-Tracking pro Charge in Sellerboard verankern, (3) Quartals-Review der Slow-Mover -- wenn &lt; 30/Monat Velocity bei Lebensmitteln, ASIN closen oder Bundle umstrukturieren.</p>
+    <h4>Hauptursache: Inbound-Mismanagement (64% des Schadens)</h4>
+    <p>Bei diesen ASINs haette FiFo den Schaden NICHT vermeiden koennen — Stock war fuer Demand zu gross. Sofort-Hebel: (1) Re-Order-Trigger an Sell-Through-Velocity koppeln (max. 6 Monate Bestand), (2) MHD-Tracking pro Charge in Sellerboard, (3) Quartals-Review der Slow-Mover.</p>
   </div>
 </div>
 
@@ -743,11 +748,23 @@ Inventarschaden YTD DE: <b>EUR 1.152,76</b> (1.6% des YTD Net-Profits von EUR 71
   <h3>Was die Analyse misst</h3>
   <p>Den <b>Inventarschaden YTD 2026</b> aus Lebensmittel-MHD + Aging-Surcharges -- und die <b>Schuld-Aufteilung</b>:</p>
   <ul>
-    <li><b>Inventarschaden = COGS verbrannter Stueck + Disposal-Fees + Aging-Surcharge.</b> Quellen: SP-API <code>inventory_ledger</code> (EXPIRED Adjustments), <code>removal_orders</code> (Disposal-Fees), <code>fba_storage_fees</code> (Surcharge). Sellerboard COGS pro Stueck.</li>
-    <li><b>Schuld-Aufteilung via Velocity-Check:</b> Pro betroffener ASIN wird Avg-Velocity Jan-Feb 2026 (vor MHD-Crash) vs. Avg-Lagerbestand Feb 2026 verglichen. Daraus = <b>Verkaufsdauer in Monaten</b>. Lebensmittel-MHDs sind typisch 12-24 Monate. Liegt Verkaufsdauer drueber, war FiFo irrelevant -- Stock konnte nie rotieren = unsere Schuld (zu viel inbounded).</li>
+    <li><b>Inventarschaden = COGS verbrannter Stueck + Disposal-Fees + Aging-Surcharge.</b> Quellen: SP-API <code>inventory_ledger</code> (EXPIRED Adjustments), <code>removal_orders</code> (Disposal-Fees, nur FiFo-attributable Sources), <code>fba_storage_fees</code> (Surcharge). Sellerboard COGS pro Stueck.</li>
+    <li><b>Schuld-Aufteilung via Velocity-Check:</b> Pro betroffener ASIN wird Avg-Verkaufs-Velocity ueber 6 Monate (Sep 2025 - Feb 2026) vs. Avg-Lagerbestand Feb 2026 verglichen. Daraus = <b>Verkaufsdauer in Monaten</b>. Lebensmittel-MHDs sind typisch 12-24 Monate.</li>
   </ul>
-  <p><b>Schwellwerte:</b> &lt;6 Mo = FIFO_KRITISCH (Amazons Reihenfolge entscheidend). 6-12 Mo = GRENZWERTIG. >12 Mo = INBOUND_MISMANAGEMENT (unsere Schuld).</p>
-  <p><b>Wichtig:</b> Diese Analyse beweist nicht dass Amazon den FiFo-Grundsatz verletzt hat. Charge-Level Outbound-Tracking gibt's nicht in der SP-API. Was wir messen ist <b>"haette FiFo den Unterschied gemacht?"</b> -- bei >12 Mo Verkaufsdauer ganz klar nein.</p>
+  <p><b>Schwellwerte:</b> &lt;6 Mo = FIFO_KRITISCH (Amazons Reihenfolge entscheidend, Reimbursement-Claim plausibel). 6-12 Mo = GRENZWERTIG. >12 Mo = INBOUND_MISMANAGEMENT (FiFo haette nicht gerettet).</p>
+
+  <h3>Limitierungen + Caveats</h3>
+  <div class="warn-box">
+    <b>1. Velocity-Fenster kann saisonal verzerrt sein.</b> 6-Monate-Mittel (Sep 2025 - Feb 2026) faengt Q4-Saisonalitaet, aber kann fuer ASINs die nach Sep 2025 launched wurden nicht vollstaendig sein (Velocity dann ueber weniger Monate gemittelt). Saisonale ASINs mit klarer Single-Season-Spitze koennen falsch klassifiziert werden.
+    <br><br>
+    <b>2. avg_quantity_on_hand ist Monatsmittel.</b> <code>fba_storage_fees.avg_quantity_on_hand</code> ist Avg ueber Februar, nicht Spitzen-Inbound. Der wahre Maximalbestand kann hoeher gewesen sein. Verkaufsdauer wird leicht unterschaetzt -- Direktion stimmt aber.
+    <br><br>
+    <b>3. FiFo-Verstoss ist NICHT direkt beweisbar.</b> Charge-Level Outbound-Tracking gibt's nicht in der SP-API. Was wir messen ist <i>"haette FiFo den Schaden vermeiden koennen?"</i> bei vorhandener Velocity. FIFO_KRITISCH-Bucket ist eine plausible Vermutung, kein harter Beweis.
+    <br><br>
+    <b>4. Lot-Level-Daten sind sample-biased.</b> Die <code>fba_inbound_items</code>-Tabelle wurde 2026-04-28 angelegt -- enthaelt nur Inbound-Plans die zu diesem Stichtag noch in Amazons API waren (32 DE / 6 US Lots). Aeltere Plans sind weg. "Lot-Level Beweis" Sektion ist daher Indikator, nicht Vollbild.
+    <br><br>
+    <b>5. Step 5 (Aged-Removal Cancel-Quote) ist KEIN FiFo-Indikator.</b> Cancel zeigt nur ob Demand nachkam -- nicht ob Amazon FiFo befolgt hat. Wird hier als <i>Inventory-Rotation-Health</i> dargestellt, nicht als FiFo-Beweis.
+  </div>
 
   <h3>Datenquellen im Detail</h3>
   <ul>
@@ -786,7 +803,7 @@ const ctx1 = document.getElementById('storageChart');
 new Chart(ctx1, {
   type: 'bar',
   data: {
-    labels: 252.3,
+    labels: 29.0,
     datasets: [
       {label: 'Storage Fee', data: [1014.8, 843.06, 1099.45], backgroundColor: '#d29922cc'},
       {label: 'Aging Surcharge', data: [0.0, 0.0, 356.14], backgroundColor: '#f85149cc'}
