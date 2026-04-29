@@ -83,53 +83,55 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <h1>TimberTaste US -- Inventory-Aging-Loss-Analyse YTD <span style="background:var(--accent);color:#fff;padding:3px 10px;border-radius:4px;font-size:14px;margin-left:6px">US ONLY</span></h1>
 <div class="sub">
-  <b style="color:var(--accent)">Was hat uns YTD durch abgelaufene + alternde Lagerware gekostet -- und haette FiFo den Schaden verhindern koennen?</b> Velocity-basierte Klassifikation pro ASIN: <b>INBOUND_MISMANAGEMENT</b> (>12 Mo Verkaufsdauer = FiFo haette nicht gerettet). <b>GRENZWERTIG</b> (6-12 Mo). <b>FIFO_KRITISCH</b> (&lt;6 Mo = Reimbursement-Claim plausibel). Plus <b>AGING_SURCHARGE</b> (Inbound-FiFo, Storage-Aufschlag fuer Altbestand).
+  <b style="color:var(--accent)">Was hat uns YTD durch abgelaufene + alternde Lagerware gekostet -- und haette FiFo den Schaden verhindern koennen?</b> Velocity-basierte Klassifikation pro ASIN: <b>INBOUND_MISMANAGEMENT</b> (>12 Mo Verkaufsdauer = FiFo haette nicht gerettet). <b>GRENZWERTIG</b> (6-12 Mo). <b>FEFO_KANDIDAT</b> (&lt;6 Mo = Reimbursement-Claim plausibel). Plus <b>AGING_SURCHARGE</b> (Inbound-FiFo, Storage-Aufschlag fuer Altbestand).
   <br>Quellen: SP-API direkt (Removal Orders, Reimbursements, Removal Shipments) + Supabase (inventory_ledger, fba_inbound_items, fba_inventory_age, fba_storage_fees, sellerboard_daily, products) | Marketplace: <code style="color:var(--accent)">ATVPDKIKX0DER (amazon.com)</code> | Currency: <code style="color:var(--accent)">USD</code> | Zeitraum: <b>2026-01-01 bis 2026-04-28</b> | Stand: 2026-04-28
 </div>
 
-<div class="headline" style="border-left-color:var(--neg)">
-<b class="neg">
-43% des Schadens haetten durch FiFo verhindert werden koennen — Reimbursement-Claim moeglich.
-</b><br>
-Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD 8.759,66).
+<div class="headline" style="border-left-color:var(--warn)">
+<b class="warn">Inventarschaden YTD US: USD 13.186,91 (150.5% des YTD-Profits)</b>
+<br>
+3.681 EXPIRED-Units neu YTD + USD 689,96 Aging-Surcharge.
 <br><br>
-<b>Schuld-Aufteilung (alle % vom Total Inventarschaden):</b>
+<b>Direktionale Diagnose</b> (Forward-Velocity Feb 2026 + Saisonalitaet aus 2025):
 <ul style="margin:6px 0 0 22px;line-height:1.9">
-<li><b>52%</b> (USD 6.792,79) — <b>FiFo haette nicht gerettet</b> (Verkaufsdauer >12 Mo). Stock war fuer Demand zu gross. Ursache: Inbound-Entscheidung.</li>
-<li><b>43%</b> (USD 5.697,58) — <b>FiFo waere entscheidend gewesen</b> (Verkaufsdauer &lt;6 Mo). Charge mit kuerzerem MHD haette zuerst raus muessen. <i>Hier ist Reimbursement-Claim plausibel.</i></li>
-<li><b>0%</b> (USD 6,58) — Grenzwertig (6-12 Mo).</li>
-<li><b>5%</b> (USD 689,96) — Aging-Surcharge (Inbound-FiFo, nicht velocity-klassifiziert).</li>
+<li><b>USD 12.493,05 (95%)</b> — Inbound-Mismanagement. Verkaufsdauer >12 Mo bei Forward-Velocity. FEFO haette diesen Verlust <b>nicht verhindern koennen</b>.</li>
+<li><b>USD 689,96 (5%)</b> — Aging-Surcharge fuer Altbestand (Inbound-FiFo, nicht MHD-relevant).</li>
 
+<li><b>USD 3,90 (0.0%)</b> — FEFO-Kandidaten (&lt;6 Mo). <b>NICHT als Reimbursement-Claim einreichen</b> ohne Lot-Beweis — Amazon zerlegt das mit eigenen Sales-Daten.</li>
 </ul>
+<br>
+<div style="background:var(--bg);border-left:3px solid var(--accent);padding:10px 14px;margin-top:8px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.6">
+<b style="color:var(--accent)">Methodische Limitierung:</b> Vollstaendige FEFO-Forensik aktuell <b>NICHT moeglich</b> -- die Lot-Tabelle <code>fba_inbound_items</code> hat <b>0% Coverage</b> fuer die EXPIRED-FNSKUs YTD (Survivorship-Bias: Amazons API liefert nur Lots die zum Pull-Datum noch aktiv waren). Snapshot-Pipeline laeuft erst seit 2026-04-28. Saubere Lot-Simulation ab <b>Q3 2026</b> moeglich (6 Mo dichte Daten). <b>Bis dahin: Aussagen sind directional</b>, keine Reimbursement-Empfehlung ableitbar.
+</div>
 </div>
 
 <!-- VERDICT BREAKDOWN -->
 <div class="card" style="margin-bottom:24px">
-  <h3>Schuld-Aufteilung pro Verlust-Bucket <span class="src inf">Velocity-basiert</span></h3>
-  <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Pro ASIN: Avg-Verkaufs-Velocity ueber 6 Monate (Sep 2025 - Feb 2026, faengt Q4-Saisonalitaet) ÷ Avg-Lagerbestand Feb 2026 = Verkaufsdauer. Bei Lebensmitteln (MHD typisch 12-24 Mo): Liegt Verkaufsdauer drueber, war Stock zu gross fuer Demand -- FiFo irrelevant. Liegt drunter, war FiFo entscheidend.</p>
+  <h3>Schaden-Aufteilung pro Bucket <span class="src inf">Forward-Velocity Feb 2026</span></h3>
+  <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Pro ASIN: Forward-Velocity (Feb 2026 = Monat unmittelbar vor MHD-Crash) ÷ Avg-Lagerbestand Feb = Verkaufsdauer. Forward statt Mittel weil Q4-Peaks bei Saisonprodukten (Hot Sauce, Geschenksets) den Mittelwert verzerren.</p>
   <table>
     <thead><tr><th>Bucket</th><th class="num">Units</th><th class="num">Schaden USD</th><th class="num">% von Total</th><th>Bedeutung</th></tr></thead>
     <tbody>
       <tr>
         <td><span class="badge expired">INBOUND_MISMANAGEMENT</span></td>
-        <td class="num">2.614</td>
-        <td class="num neg">6.792,79</td>
-        <td class="num neg">52%</td>
+        <td class="num">3.680</td>
+        <td class="num neg">12.493,05</td>
+        <td class="num neg">95%</td>
         <td style="font-size:11px">Verkaufsdauer >12 Mo — FiFo haette nicht gerettet</td>
       </tr>
       <tr>
         <td><span class="badge aged">GRENZWERTIG</span></td>
-        <td class="num">1</td>
-        <td class="num warn">6,58</td>
+        <td class="num">0</td>
+        <td class="num warn">0,00</td>
         <td class="num">0.0%</td>
         <td style="font-size:11px">6-12 Mo — bei sauberem FiFo evtl. vermeidbar</td>
       </tr>
       <tr>
-        <td><span class="badge removal">FIFO_KRITISCH</span></td>
-        <td class="num">1.066</td>
-        <td class="num neg">5.697,58</td>
-        <td class="num neg">43.2%</td>
-        <td style="font-size:11px">&lt;6 Mo — Amazons Reihenfolge entscheidend (<b>Reimbursement-Claim moeglich</b>)</td>
+        <td><span class="badge removal">FEFO_KANDIDAT</span></td>
+        <td class="num">1</td>
+        <td class="num">3,90</td>
+        <td class="num">0.0%</td>
+        <td style="font-size:11px">&lt;6 Mo — FEFO koennte Unterschied gemacht haben. <b>Ohne Lot-Beweis NICHT reklamieren.</b></td>
       </tr>
       <tr>
         <td><span class="badge" style="background:#d2992230;color:var(--warn)">AGING_SURCHARGE</span></td>
@@ -165,10 +167,10 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
     <div class="v">3</div>
     <div class="d">Snapshot 2026-04-28</div>
   </div>
-  <div class="kpi red">
-    <div class="l">FiFo haette gerettet</div>
-    <div class="v">43%</div>
-    <div class="d">USD 5.697,58 (Reimbursement-Pfad)</div>
+  <div class="kpi amber">
+    <div class="l">Inbound-Mismanagement</div>
+    <div class="v">95%</div>
+    <div class="d">USD 12.493,05 (>12 Mo Verkaufsdauer)</div>
   </div>
 </div>
 
@@ -222,9 +224,10 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
       <br>
       <b>Direct Loss (COGS):</b> USD 3.568,14 | <b>Disposal-Fee:</b> USD 760,45 (335 Units, 3 Orders) | <b>Lost Revenue:</b> USD 14.605,38
       <br><br>
-      <span class="badge removal">VERDICT: FIFO_KRITISCH</span>
-      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>447.2</b>/Mo | Lager Feb: <b>882</b> Units | Verkaufsdauer: <b>2.0 Mo</b></span>
-      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 2.0 Monate bei 447.2/Mo (Avg 6 Mo). FiFo waere entscheidend gewesen — Charge-Reihenfolge relevant fuer MHD-Ausgang.</span>
+      <span class="badge expired">INBOUND_MISMANAGEMENT</span>
+      <span class="badge aged" style="margin-left:4px">Q4_TILT (46% Q4 2025)</span>
+      <span style="color:var(--muted);font-size:11px;margin-left:8px"> Forward-Velocity Feb 2026: <b>23</b>/Mo | Lager Feb: <b>882</b> Units | Verkaufsdauer: <b>38.3 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 38.3 Monate bei 23/Mo (Forward Feb 2026). Q4-Saison-Profil: Q4_TILT (45.7% Q4-Share 2025). FEFO haette diesen Verlust NICHT verhindern koennen — Stock war fuer realistische Demand zu gross.</span>
       
     </div>
   </div>
@@ -243,9 +246,10 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
       <br>
       <b>Direct Loss (COGS):</b> USD 2.404,88 | <b>Disposal-Fee:</b> USD 4.387,91 (1945 Units, 4 Orders) | <b>Lost Revenue:</b> USD 48.202,16
       <br><br>
-      <span class="badge expired">VERDICT: INBOUND_MISMANAGEMENT</span>
-      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>109.3</b>/Mo | Lager Feb: <b>2.745</b> Units | Verkaufsdauer: <b>25.1 Mo</b></span>
-      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 25.1 Monate bei 109.3/Mo (Avg 6 Mo). FiFo haette diesen Verlust NICHT verhindern koennen — Stock war von Anfang an zu gross fuer Demand.</span>
+      <span class="badge expired">INBOUND_MISMANAGEMENT</span>
+      <span class="badge aged" style="margin-left:4px">Q4_TILT (40% Q4 2025)</span>
+      <span style="color:var(--muted);font-size:11px;margin-left:8px"> Forward-Velocity Feb 2026: <b>16</b>/Mo | Lager Feb: <b>2.745</b> Units | Verkaufsdauer: <b>171.6 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 171.6 Monate bei 16/Mo (Forward Feb 2026). Q4-Saison-Profil: Q4_TILT (40.3% Q4-Share 2025). FEFO haette diesen Verlust NICHT verhindern koennen — Stock war fuer realistische Demand zu gross.</span>
       
     </div>
   </div>
@@ -264,9 +268,10 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
       <br>
       <b>Direct Loss (COGS):</b> USD 826,56 | <b>Disposal-Fee:</b> USD 519,83 (241 Units, 3 Orders) | <b>Lost Revenue:</b> USD 5.420,16
       <br><br>
-      <span class="badge removal">VERDICT: FIFO_KRITISCH</span>
-      <span style="color:var(--muted);font-size:11px"> Velocity Jan-Feb: <b>378.2</b>/Mo | Lager Feb: <b>487</b> Units | Verkaufsdauer: <b>1.3 Mo</b></span>
-      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 1.3 Monate bei 378.2/Mo (Avg 6 Mo). FiFo waere entscheidend gewesen — Charge-Reihenfolge relevant fuer MHD-Ausgang.</span>
+      <span class="badge expired">INBOUND_MISMANAGEMENT</span>
+      <span class="badge expired" style="margin-left:4px">Q4_GIFT (54% Q4 2025)</span>
+      <span style="color:var(--muted);font-size:11px;margin-left:8px"> Forward-Velocity Feb 2026: <b>39</b>/Mo | Lager Feb: <b>487</b> Units | Verkaufsdauer: <b>12.5 Mo</b></span>
+      <br><span style="font-size:11px;color:var(--text)">Lager reicht fuer 12.5 Monate bei 39/Mo (Forward Feb 2026). Q4-Saison-Profil: Q4_GIFT (53.5% Q4-Share 2025). FEFO haette diesen Verlust NICHT verhindern koennen — Stock war fuer realistische Demand zu gross.</span>
       
     </div>
   </div>
@@ -605,20 +610,28 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
   <div class="step-head"><div class="step-num s4">6</div><h2>Empfehlungen</h2></div>
 
   <div class="reco neg">
-    <h4>B0CMPJ5TP2: Inbound stoppen (25.1 Mo Verkaufsdauer)</h4>
-    <p>TIMBER TASTE® Hot Sauce Gift Sets [5x1.35 oz] - Hot Sauce Va. <b>Velocity nur 109.3/Mo, aber 2.745 im Lager</b> = wuerde 25.1 Monate brauchen um zu rotieren. 2.614 Units sind YTD verfallen (USD 6.792,79 Schaden). YTD Profit: <b>USD -4.533,65</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+    <h4>B0CMPJ5TP2: Inbound stoppen (171.6 Mo Verkaufsdauer)</h4>
+    <p>TIMBER TASTE® Hot Sauce Gift Sets [5x1.35 oz] - Hot Sauce Va. <b>Velocity nur 16/Mo, aber 2.745 im Lager</b> = wuerde 171.6 Monate brauchen um zu rotieren. 2.614 Units sind YTD verfallen (USD 6.792,79 Schaden). YTD Profit: <b>USD -4.533,65</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+  </div>
+  <div class="reco neg">
+    <h4>B0CMPK24FZ: Inbound stoppen (38.3 Mo Verkaufsdauer)</h4>
+    <p>TIMBER TASTE® Color Hot Sauce Gift Sets [5x1.35 oz] - Hot Sa. <b>Velocity nur 23/Mo, aber 882 im Lager</b> = wuerde 38.3 Monate brauchen um zu rotieren. 774 Units sind YTD verfallen (USD 4.328,59 Schaden). YTD Profit: <b>USD -1.316,48</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
+  </div>
+  <div class="reco neg">
+    <h4>B0CMPL7V3S: Inbound stoppen (12.5 Mo Verkaufsdauer)</h4>
+    <p>TIMBER TASTE® World Hot Sauce Gift Set [5x1.35 oz] - Hot Sau. <b>Velocity nur 39/Mo, aber 487 im Lager</b> = wuerde 12.5 Monate brauchen um zu rotieren. 288 Units sind YTD verfallen (USD 1.346,39 Schaden). YTD Profit: <b>USD -399,44</b> (Verlust!). <b>Sofort-Aktion:</b> Re-Order erst wenn Bestand &lt; 6× Monatsvelocity. Aktuelle Inbound-Quote auf 0 setzen bis Bestand reduziert.</p>
   </div>
   <div class="reco warn">
     <h4>Aging-Surcharge ab 2026-03: USD 689,96 -- wird weiter steigen</h4>
     <p>Top-Beitraege: B0CMPJ5TP2 (USD 115,05) + B08P3T3ZRG (USD 86,49). Diese ASINs verkaufen, aber Lagerbestand zu hoch fuer Throughput. <b>Empfehlung:</b> Inbound-Quantitaeten halbieren bis Aging-Bucket leer. Sonst multipliziert sich der Surcharge in den naechsten 3-6 Monaten.</p>
   </div>
-  <div class="reco neg">
-    <h4>Reimbursement-Claim-Kandidaten: 5 ASINs (USD 5.697,58 = 43% des Schadens)</h4>
-    <p>Diese ASINs hatten Verkaufsdauer &lt;6 Monate -- bei MHD-Charge haette Amazons Reihenfolge entscheidend sein muessen. Wahrscheinlich FEFO-Verstoss durch Amazon. Action: Reimbursement-Claim-Pfad pruefen (Frist 18 Mo ab Disposal-Datum). Top: <code>B0CMPK24FZ</code> (774u, vDauer 2.0Mo), <code>B0CMPL7V3S</code> (288u, vDauer 1.3Mo), <code>B0BFRRFLDF</code> (1u, vDauer 3.7Mo).</p>
+  <div class="reco warn">
+    <h4>Q3 2026: Saubere FEFO-Forensik wird moeglich</h4>
+    <p>Lot-Snapshot-Pipeline laeuft seit 2026-04-28 woechentlich. Ab Oktober 2026 haben wir 6 Monate dichte Lot-Daten — dann ist FEFO-Simulation pro Charge moeglich (greedy FEFO-Replay vs. tatsaechliche Disposals = harter Beweis). Bis dahin: Forward-Velocity-Approximation directional, keine Reklamationen einreichen. Skill-Idee dokumentiert: <code>02_ops_execution/ppc_memory/project_fba_fifo_audit_potential.md</code>.</p>
   </div>
   <div class="reco neg">
-    <h4>Gemischte Story: 52% Inbound-Mismanagement + 43% echtes FiFo-Versagen</h4>
-    <p>Sofort-Hebel: (1) Inbound-Stop fuer INBOUND_MISMANAGEMENT-ASINs (USD 6.792,79 Schaden), (2) Reimbursement-Claim-Pfad fuer FIFO_KRITISCH (USD 5.697,58 Potenzial), (3) MHD-Tracking pro Charge in Sellerboard verankern.</p>
+    <h4>Hauptursache: Inbound-Mismanagement (95% des Schadens)</h4>
+    <p>Bei diesen ASINs haette FEFO den Schaden NICHT verhindern koennen — Bestand war fuer Forward-Velocity zu gross. Sofort-Hebel: (1) Re-Order-Trigger an Sell-Through-Velocity koppeln (max. 6 Monate Bestand), nicht an Lager-Kapazitaet, (2) Bei Q4-Saisonprodukten: Inbound nur fuer Q4-Peak + 1 Mo Sicherheits-Puffer, NICHT fuer Year-Round-Velocity, (3) Quartals-Review der Slow-Mover (&lt;30/Mo Forward-Velocity bei Lebensmitteln = ASIN closen oder Bundle restrukturieren).</p>
   </div>
 </div>
 
@@ -632,7 +645,7 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
     <li><b>Inventarschaden = COGS verbrannter Stueck + Disposal-Fees + Aging-Surcharge.</b> Quellen: SP-API <code>inventory_ledger</code> (EXPIRED Adjustments), <code>removal_orders</code> (Disposal-Fees, nur FiFo-attributable Sources), <code>fba_storage_fees</code> (Surcharge). Sellerboard COGS pro Stueck.</li>
     <li><b>Schuld-Aufteilung via Velocity-Check:</b> Pro betroffener ASIN wird Avg-Verkaufs-Velocity ueber 6 Monate (Sep 2025 - Feb 2026) vs. Avg-Lagerbestand Feb 2026 verglichen. Daraus = <b>Verkaufsdauer in Monaten</b>. Lebensmittel-MHDs sind typisch 12-24 Monate.</li>
   </ul>
-  <p><b>Schwellwerte:</b> &lt;6 Mo = FIFO_KRITISCH (Amazons Reihenfolge entscheidend, Reimbursement-Claim plausibel). 6-12 Mo = GRENZWERTIG. >12 Mo = INBOUND_MISMANAGEMENT (FiFo haette nicht gerettet).</p>
+  <p><b>Schwellwerte:</b> &lt;6 Mo = FEFO_KANDIDAT (Amazons Reihenfolge entscheidend, Reimbursement-Claim plausibel). 6-12 Mo = GRENZWERTIG. >12 Mo = INBOUND_MISMANAGEMENT (FiFo haette nicht gerettet).</p>
 
   <h3>Limitierungen + Caveats</h3>
   <div class="warn-box">
@@ -640,7 +653,7 @@ Inventarschaden YTD US: <b>USD 13.186,91</b> (150.5% des YTD Net-Profits von USD
     <br><br>
     <b>2. avg_quantity_on_hand ist Monatsmittel.</b> <code>fba_storage_fees.avg_quantity_on_hand</code> ist Avg ueber Februar, nicht Spitzen-Inbound. Der wahre Maximalbestand kann hoeher gewesen sein. Verkaufsdauer wird leicht unterschaetzt -- Direktion stimmt aber.
     <br><br>
-    <b>3. FiFo-Verstoss ist NICHT direkt beweisbar.</b> Charge-Level Outbound-Tracking gibt's nicht in der SP-API. Was wir messen ist <i>"haette FiFo den Schaden vermeiden koennen?"</i> bei vorhandener Velocity. FIFO_KRITISCH-Bucket ist eine plausible Vermutung, kein harter Beweis.
+    <b>3. FiFo-Verstoss ist NICHT direkt beweisbar.</b> Charge-Level Outbound-Tracking gibt's nicht in der SP-API. Was wir messen ist <i>"haette FiFo den Schaden vermeiden koennen?"</i> bei vorhandener Velocity. FEFO_KANDIDAT-Bucket ist eine plausible Vermutung, kein harter Beweis.
     <br><br>
     <b>4. Lot-Level-Daten sind sample-biased.</b> Die <code>fba_inbound_items</code>-Tabelle wurde 2026-04-28 angelegt -- enthaelt nur Inbound-Plans die zu diesem Stichtag noch in Amazons API waren (32 DE / 6 US Lots). Aeltere Plans sind weg. "Lot-Level Beweis" Sektion ist daher Indikator, nicht Vollbild.
     <br><br>
@@ -684,7 +697,7 @@ const ctx1 = document.getElementById('storageChart');
 new Chart(ctx1, {
   type: 'bar',
   data: {
-    labels: 25.1,
+    labels: 12.5,
     datasets: [
       {label: 'Storage Fee', data: [342.94, 1002.0], backgroundColor: '#d29922cc'},
       {label: 'Aging Surcharge', data: [0.0, 689.96], backgroundColor: '#f85149cc'}
